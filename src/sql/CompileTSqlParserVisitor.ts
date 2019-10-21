@@ -1,6 +1,6 @@
 import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor'
 import { TSqlParserVisitor } from './grammar/TSqlParserVisitor';
-import { Query_specificationContext } from './grammar/TSqlParser';
+import { Query_specificationContext, Select_listContext, Select_list_elemContext, AsteriskContext, Table_nameContext, IdContext, Simple_idContext } from './grammar/TSqlParser';
 
 export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> implements TSqlParserVisitor<any>{
     protected defaultResult() {
@@ -2264,9 +2264,15 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
     // Visit a parse tree produced by TSqlParser#query_specification.
     public visitQuery_specification = function (ctx: Query_specificationContext) {
+        const selectList = ctx.select_list().accept(this);
         if (ctx.FROM()) {
-            console.log('hhlh', ctx.SELECT());
+            const tableSources = ctx.table_sources().accept(this);
         }
+
+        if (ctx.DISTINCT()) {
+
+        }
+
         return this.visitChildren(ctx);
     };
 
@@ -2338,8 +2344,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#select_list.
-    public visitSelect_list = function (ctx) {
-        console.log('select_list', ctx);
+    public visitSelect_list = function (ctx: Select_listContext) {
         return this.visitChildren(ctx);
     };
 
@@ -2351,7 +2356,12 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#asterisk.
-    public visitAsterisk = function (ctx) {
+    public visitAsterisk = function (ctx: AsteriskContext) {
+        if (ctx.table_name()) {
+            return ctx.table_name().accept(this) + '*';
+        } else {
+            return '*'
+        }
         return this.visitChildren(ctx);
     };
 
@@ -2375,8 +2385,16 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#select_list_elem.
-    public visitSelect_list_elem = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitSelect_list_elem = function (ctx: Select_list_elemContext) {
+        if (ctx.asterisk()) {
+            return ctx.asterisk().accept(this);
+        } else if (ctx.column_elem()){
+            return ctx.column_elem().accept(this);
+        } else if (ctx.udt_elem()) {
+            return ctx.udt_elem().accept(this);
+        } else if (ctx.expression_elem()) {
+            return ctx.expression_elem().accept(this);
+        }
     };
 
 
@@ -2861,8 +2879,11 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#table_name.
-    public visitTable_name = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitTable_name = function (ctx: Table_nameContext) {
+        if (ctx.BLOCKING_HIERARCHY()) {
+            throw new Error('does not support blocking_hierarchy');
+        }
+        return ctx._table.accept(this);
     };
 
 
@@ -3029,14 +3050,24 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#id.
-    public visitId = function (ctx) {
+    public visitId = function (ctx: IdContext) {
+        if (ctx.DOUBLE_QUOTE_ID()) {
+            return ctx.DOUBLE_QUOTE_ID().text;
+        } else if (ctx.SQUARE_BRACKET_ID()) {
+            return ctx.SQUARE_BRACKET_ID().text;
+        } else if (ctx.simple_id()){
+            return ctx.simple_id().accept(this);
+        }
         return this.visitChildren(ctx);
     };
 
 
     // Visit a parse tree produced by TSqlParser#simple_id.
-    public visitSimple_id = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitSimple_id = function (ctx: Simple_idContext) {
+        if (ctx.ID()) {
+            return ctx.ID().text;
+        }
+        throw new Error('only ID is support in simple_id');
     };
 
 

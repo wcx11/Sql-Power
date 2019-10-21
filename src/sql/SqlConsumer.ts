@@ -4,7 +4,7 @@ import { TSqlParser } from './grammar/TSqlParser';
 import { CaseChangingStream } from './grammar/CaseChangingStream';
 import { CompileTSqlParserVisitor } from './CompileTSqlParserVisitor';
 export const compile = () => {
-    const input = 'select all * FROM table1 where a = "a1";';
+    const input = 'select table1.table1.table1.* FROM table1 where a = "a1";';
     const chars = new ANTLRInputStream(input);
     const upper = new CaseChangingStream(chars, true);
     const lexer = new TSqlLexer(upper);
