@@ -4,6 +4,7 @@
     "author": "tuan",
     "version": "1.0.0",
     "scripts": {
+        "antlr4ts": "antlr4ts -visitor src/sql/grammar/TSqlLexer.g4 && antlr4ts -visitor src/sql/grammar/TSqlParser.g4",
         "clean": "rimraf dist",
         "build": "npm run clean && webpack",
         "start": "webpack-dev-server",
@@ -20,6 +21,7 @@
     },
     "devDependencies": {
         "@types/react": "^16.9.9",
+        "antlr4ts-cli": "^0.5.0-alpha.3",
         "awesome-typescript-loader": "^5.2.1",
         "html-webpack-plugin": "^3.2.0",
         "webpack": "^4.41.2",

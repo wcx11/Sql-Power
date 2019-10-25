@@ -1,4 +1,4 @@
-// Generated from TSqlParser.g4 by ANTLR 4.7.3-SNAPSHOT
+// Generated from src/sql/grammar/TSqlParser.g4 by ANTLR 4.7.3-SNAPSHOT
 
 
 import { ParseTreeListener } from "antlr4ts/tree/ParseTreeListener";

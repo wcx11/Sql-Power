@@ -2362,7 +2362,6 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
         } else {
             return '*'
         }
-        return this.visitChildren(ctx);
     };
 
 
