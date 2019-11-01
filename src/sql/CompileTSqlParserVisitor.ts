@@ -3,8 +3,8 @@ import { TSqlParserVisitor } from './grammar/TSqlParserVisitor';
 import * as Parser from './grammar/TSqlParser';
 import { SelectElement, SelectTypeEnum } from '../intermediate/Select';
 import { Table } from '../intermediate/Table';
-import { ParseTree } from 'antlr4ts/tree/ParseTree';
 import { TerminalNode } from 'antlr4ts/tree/TerminalNode';
+import { PrimitiveExpression, PrimitiveValue } from '../intermediate/Expression';
 
 export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> implements TSqlParserVisitor<any>{
     // @Override
@@ -12,16 +12,14 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
         return [];
     }
     // @Override
-    public visit(tree: ParseTree) {
-        if (tree instanceof TerminalNode) {
-            return tree.text;
-        } else {
-            return tree.accept(this);
-        }
-    }
-    // @Override
     protected aggregateResult(aggregate, nextResult) {
         return [...aggregate, nextResult];
+    }
+    public visitChildren(node) {
+        if (node instanceof TerminalNode) {
+            return node.text;
+        }
+        return super.visitChildren(node);
     }
 
     constructor() {
@@ -2173,14 +2171,48 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#expression.
-    public visitExpression = function (ctx) {
+    public visitExpression = function (ctx: Parser.ExpressionContext) {
+        if (ctx.primitive_expression()) {
+            return ctx.primitive_expression().accept(this);
+        }
+
+        if (ctx.function_call()) {
+            return ctx.function_call().accept(this);
+        }
+
+        if (ctx.full_column_name()) {
+
+        }
+
+        if (ctx._op) {
+            
+        }
+
+        if (ctx.bracket_expression()) {
+            return ctx.bracket_expression().accept(this);
+        }
+
+        if (ctx.comparison_operator()) {
+
+        }
+
+        if (ctx.assignment_operator()) {
+            
+        }
         return this.visitChildren(ctx);
     };
 
 
     // Visit a parse tree produced by TSqlParser#primitive_expression.
-    public visitPrimitive_expression = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitPrimitive_expression = function (ctx: Parser.Primitive_expressionContext) : PrimitiveExpression {
+        let expression = new PrimitiveExpression();
+        if (ctx.constant()) {
+            expression.value = ctx.constant().accept(this);
+            return expression;
+        } else if (ctx.NULL()) {
+            return expression;
+        }
+        throw new Error ("only null and constant are supported as primitive_expression in select clause");
     };
 
 
@@ -2197,8 +2229,8 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#bracket_expression.
-    public visitBracket_expression = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitBracket_expression = function (ctx: Parser.Bracket_expressionContext) {
+        return ctx.expression().accept(this);
     };
 
 
@@ -2408,14 +2440,14 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
     // Visit a parse tree produced by TSqlParser#expression_elem.
     public visitExpression_elem = function (ctx: Parser.Expression_elemContext) {
         let element = new SelectElement(SelectTypeEnum.EXPRESSION);
-        ctx.expression().accept(this)
+        element.expression = ctx.expression().accept(this);
         if (ctx.column_alias()) {
             element.columnAlias = ctx.column_alias().accept(this);
         }
         if (ctx.as_column_alias()) {
             element.columnAlias = ctx.as_column_alias().accept(this);
         }
-        return this.visitChildren(ctx);
+        return element;
     };
 
 
@@ -3083,14 +3115,38 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#constant.
-    public visitConstant = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitConstant = function (ctx: Parser.ConstantContext): PrimitiveValue {
+        if (ctx.STRING()) {
+            return ctx.STRING().text;
+        }
+
+        let numberValue = 0;
+        if (ctx.BINARY()) {
+            numberValue = parseInt(ctx.BINARY().text, 16);
+        } else if (ctx.DECIMAL()) {
+            numberValue = parseInt(ctx.DECIMAL().text);
+        } else if (ctx.REAL()) {
+            numberValue = parseFloat(ctx.REAL().text);
+        } else if (ctx.FLOAT()) {
+            numberValue = parseFloat(ctx.FLOAT().text);
+        }
+
+        if (ctx.DOLLAR()) {
+            // TSQL doesn't contains boolean values, use $+number to present a boolean.
+            // all value except 0 means true while 0 means false.
+            return numberValue !== 0;
+        }
+         let coefficient = 1;
+        if (ctx.sign()) {
+            coefficient *= ctx.sign().accept<number>(this);
+        }
+        return numberValue * coefficient;
     };
 
 
     // Visit a parse tree produced by TSqlParser#sign.
-    public visitSign = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitSign = function (ctx: Parser.SignContext) : number {
+        return ctx.MINUS() ? -1 : 1;
     };
 
 

@@ -1,4 +1,5 @@
 import { Table } from "./Table";
+import { BaseExpression } from "./Expression";
 
 export class Select {
     public selectList: SelectElement[];
@@ -12,12 +13,12 @@ export class SelectElement {
     relatedTable: Table;
     columnName?: string;
     columnAlias?: string;
-    expression?: string;
+    expression?: BaseExpression;
 }
 
 export enum SelectTypeEnum {
-    ALL,
-    COLUMN,
-    EXPRESSION,
-    UDT
+    ALL='ALL',
+    COLUMN='COLUMN',
+    EXPRESSION='EXPRESSION',
+    UDT='UDT'
 }
