@@ -1,10 +1,11 @@
 import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor'
 import { TSqlParserVisitor } from './grammar/TSqlParserVisitor';
 import * as Parser from './grammar/TSqlParser';
-import { SelectElement, SelectTypeEnum } from '../intermediate/Select';
-import { Table } from '../intermediate/Table';
+import { SelectElement, SelectTypeEnum, Select } from '../intermediate/Select';
+import { Table, Column, JoinedTable, TableSource, DerivedTable, JoinPart as JoinPart, JoinTypeEnum } from '../intermediate/Table';
 import { TerminalNode } from 'antlr4ts/tree/TerminalNode';
-import { PrimitiveExpression, PrimitiveValue } from '../intermediate/Expression';
+import * as Exp from '../intermediate/Expression';
+import { Query } from '../intermediate/Query';
 
 export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> implements TSqlParserVisitor<any>{
     // @Override
@@ -45,14 +46,22 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#sql_clause.
-    public visitSql_clause = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitSql_clause = function (ctx: Parser.Sql_clauseContext) {
+        if (ctx.dml_clause()) {
+            return ctx.dml_clause().accept(this);
+        } else {
+            throw new Error('currently only dml_clause is supported in sql_clause');
+        }
     };
 
 
     // Visit a parse tree produced by TSqlParser#dml_clause.
-    public visitDml_clause = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitDml_clause = function (ctx: Parser.Dml_clauseContext) {
+        if (ctx.select_statement()) {
+            return ctx.select_statement().accept(this);
+        } else {
+            throw new Error('currently only select_statement is supported in dml_clause');
+        }
     };
 
 
@@ -1359,9 +1368,9 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#select_statement.
-    public visitSelect_statement = function (ctx) {
-        console.log("select", ctx);
-        return this.visitChildren(ctx);
+    public visitSelect_statement = function (ctx: Parser.Select_statementContext) {
+        //TODO: support with_expression, order_by_clause, option_clause;
+        return ctx.query_expression().accept(this);
     };
 
 
@@ -2181,11 +2190,15 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
         }
 
         if (ctx.full_column_name()) {
+            return new Exp.ColumnExpressoin(ctx.full_column_name().accept(this));
+        }
 
+        if (ctx.unary_operator_expression()) {
+            return ctx.unary_operator_expression().accept(this);
         }
 
         if (ctx._op) {
-            
+            return new Exp.BinaryExpression(ctx._op.text, ctx.expression(0).accept(this), ctx.expression(1).accept(this));
         }
 
         if (ctx.bracket_expression()) {
@@ -2193,19 +2206,20 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
         }
 
         if (ctx.comparison_operator()) {
-
+            throw new Error('doesn\'t support comparison_operator in select statement');
         }
 
         if (ctx.assignment_operator()) {
-            
+            throw new Error('doesn\'t support assignment_operator in select statement');
         }
-        return this.visitChildren(ctx);
+
+        throw new Error ('unsupported expression.')
     };
 
 
     // Visit a parse tree produced by TSqlParser#primitive_expression.
-    public visitPrimitive_expression = function (ctx: Parser.Primitive_expressionContext) : PrimitiveExpression {
-        let expression = new PrimitiveExpression();
+    public visitPrimitive_expression = function (ctx: Parser.Primitive_expressionContext) : Exp.PrimitiveExpression {
+        let expression = new Exp.PrimitiveExpression();
         if (ctx.constant()) {
             expression.value = ctx.constant().accept(this);
             return expression;
@@ -2223,8 +2237,16 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#unary_operator_expression.
-    public visitUnary_operator_expression = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitUnary_operator_expression = function (ctx: Parser.Unary_operator_expressionContext) {
+        if (ctx._op) {
+            if (ctx._op.text === '-') {
+                return new Exp.UnaryExpression('-', ctx.expression().accept(this));
+            } else {
+                return ctx.expression().accept(this);
+            }
+        } else {
+            return new Exp.UnaryExpression('~', ctx.expression().accept(this));
+        }
     };
 
 
@@ -2295,8 +2317,16 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#query_expression.
-    public visitQuery_expression = function (ctx) {
-        console.log("query_expression", ctx);
+    public visitQuery_expression = function (ctx: Parser.Query_expressionContext) {
+        if (ctx.query_specification()) {
+            return ctx.query_specification().accept(this);
+        } else {
+            return ctx.query_expression().accept(this);
+        }
+
+        if (ctx.sql_union) {
+            throw new Error('sql_union will be supported in the future in query_expression');
+        }
         return this.visitChildren(ctx);
     };
 
@@ -2308,17 +2338,19 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#query_specification.
-    public visitQuery_specification = function (ctx: Parser.Query_specificationContext) {
-        const selectList = ctx.select_list().accept(this);
+    public visitQuery_specification = function (ctx: Parser.Query_specificationContext): Query {
+        let query = new Query();
+        query.select = new Select();
+        query.select.selectList = ctx.select_list().accept(this);
         if (ctx.FROM()) {
-            const tableSources = ctx.table_sources().accept(this);
+            query.select.from = ctx.table_sources().accept(this);
         }
 
         if (ctx.DISTINCT()) {
-
+            query.select.isDistinct = true;
         }
 
-        return this.visitChildren(ctx);
+        return query;
     };
 
 
@@ -2390,7 +2422,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
     // Visit a parse tree produced by TSqlParser#select_list.
     public visitSelect_list = function (ctx: Parser.Select_listContext) {
-        return this.visitChildren(ctx);
+        return ctx.select_list_elem().map(select_list_elem => select_list_elem.accept(this));
     };
 
 
@@ -2404,19 +2436,17 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
     public visitAsterisk = function (ctx: Parser.AsteriskContext) {
         let element = new SelectElement(SelectTypeEnum.ALL);
         if (ctx.table_name()) {
-            element.relatedTable = new Table();
-            element.relatedTable.name = ctx.table_name().accept(this);
+            element.relatedTable = new Table(ctx.table_name().accept(this));
         }
         return element;
     };
 
 
     // Visit a parse tree produced by TSqlParser#column_elem.
-    public visitColumn_elem = function (ctx: Parser.Column_elemContext) {
+    public visitColumn_elem = function (ctx: Parser.Column_elemContext): SelectElement {
         let element = new SelectElement(SelectTypeEnum.COLUMN);
         if (ctx.table_name()) {
-            element.relatedTable = new Table();
-            element.relatedTable.name = ctx.table_name().accept(this);
+            element.relatedTable = new Table(ctx.table_name().accept(this));
         }
 
         if (ctx._column_name) {
@@ -2438,7 +2468,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#expression_elem.
-    public visitExpression_elem = function (ctx: Parser.Expression_elemContext) {
+    public visitExpression_elem = function (ctx: Parser.Expression_elemContext): SelectElement {
         let element = new SelectElement(SelectTypeEnum.EXPRESSION);
         element.expression = ctx.expression().accept(this);
         if (ctx.column_alias()) {
@@ -2452,7 +2482,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#select_list_elem.
-    public visitSelect_list_elem = function (ctx: Parser.Select_list_elemContext) {
+    public visitSelect_list_elem = function (ctx: Parser.Select_list_elemContext): SelectElement {
         if (ctx.asterisk()) {
             return ctx.asterisk().accept(this);
         } else if (ctx.column_elem()){
@@ -2468,26 +2498,50 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#table_sources.
-    public visitTable_sources = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitTable_sources = function (ctx: Parser.Table_sourcesContext): TableSource[] {
+        return ctx.table_source().map(table_source => table_source.accept(this));
     };
 
 
     // Visit a parse tree produced by TSqlParser#table_source.
-    public visitTable_source = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitTable_source = function (ctx: Parser.Table_sourceContext): TableSource {
+        return ctx.table_source_item_joined().accept(this);
     };
 
 
     // Visit a parse tree produced by TSqlParser#table_source_item_joined.
-    public visitTable_source_item_joined = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitTable_source_item_joined = function (ctx: Parser.Table_source_item_joinedContext): TableSource {
+        let tableSource: TableSource = ctx.table_source_item().accept(this);
+        if (ctx.join_part() && ctx.join_part().length > 0) {
+            let joinedTable = new JoinedTable();
+            joinedTable.tableSource = tableSource;
+            joinedTable.joinPart = ctx.join_part().map(part => part.accept(this));
+            return joinedTable;
+        }
+        return tableSource;
     };
 
 
     // Visit a parse tree produced by TSqlParser#table_source_item.
-    public visitTable_source_item = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitTable_source_item = function (ctx: Parser.Table_source_itemContext) : TableSource {
+        let tableSource: TableSource;
+        if (ctx.table_name_with_hint()) {
+            tableSource = ctx.table_name_with_hint().accept(this);
+        } else if (ctx.full_table_name()) {
+            tableSource = ctx.full_table_name().accept(this);
+        } else if (ctx.derived_table()) {
+            return ctx.derived_table().accept(this);
+        } else if (ctx.rowset_function() || ctx.change_table() || ctx.function_call() || ctx.LOCAL_ID() || ctx.open_xml()) {
+            throw new Error ('currently don\'t support rowset_function, change_table, function_call, LOCAL_ID, open_xml in table_source_item');
+        } else {
+            throw new Error ('unsupported table_source_item');
+        }
+
+        if (ctx.as_table_alias()) {
+            tableSource.alias = ctx.as_table_alias().accept(this);
+        }
+        
+        return tableSource;
     };
 
 
@@ -2516,8 +2570,36 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#join_part.
-    public visitJoin_part = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitJoin_part = function (ctx: Parser.Join_partContext) {
+        let joinPart = new JoinPart();
+        joinPart.joinType = JoinTypeEnum.INNER;
+        if (ctx.LEFT()) {
+            joinPart.joinType = JoinTypeEnum.LEFT;
+        } else if (ctx.FULL()) {
+            joinPart.joinType = JoinTypeEnum.FULL;
+        } else if (ctx.RIGHT()) {
+            joinPart.joinType = JoinTypeEnum.RIGHT;
+        } else if (ctx.CROSS()) {
+            if (ctx.JOIN()) {
+                joinPart.joinType = JoinTypeEnum.CROSS;
+            } else {
+                joinPart.joinType = JoinTypeEnum.CROSS_APPLY;
+            }
+        } else if (ctx.OUTER() && ctx.APPLY()) {
+            joinPart.joinType = JoinTypeEnum.OUTER_APPLY;
+        } else if (ctx.PIVOT()) {
+            joinPart.joinType = JoinTypeEnum.PIVOT;
+        } else if (ctx.UNPIVOT()) {
+            joinPart.joinType = JoinTypeEnum.UNPIVOT;
+        }
+
+        if (ctx.table_source()) {
+            joinPart.tableSource = ctx.table_source().accept(this);
+        }
+
+        if (ctx.search_condition()) {
+            joinPart.joinCondition = ctx.search_condition().accept(this);
+        }
     };
 
 
@@ -2540,8 +2622,12 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#table_name_with_hint.
-    public visitTable_name_with_hint = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitTable_name_with_hint = function (ctx: Parser.Table_name_with_hintContext): Table {
+        if (ctx.with_table_hints()) {
+            console.warn('with_table_hints not supported at this moment');
+        }
+
+        return new Table(ctx.table_name().accept(this));
     };
 
 
@@ -2558,8 +2644,18 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#derived_table.
-    public visitDerived_table = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitDerived_table = function (ctx: Parser.Derived_tableContext): TableSource {
+        if (ctx.parent instanceof Parser.Table_source_itemContext) {
+            if (ctx.subquery()) {
+                let derivedTable = new DerivedTable();
+                derivedTable.subQuery = ctx.subquery().select_statement().accept(this);
+                return derivedTable;
+            } else {
+                throw new Error('table_value_constructor not supported in derived_table of table_source_item')
+            }
+        } else {
+            throw new Error('not implemented');
+        }
     };
 
 
@@ -2768,20 +2864,23 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#as_column_alias.
-    public visitAs_column_alias = function (ctx: Parser.As_column_aliasContext) {
+    public visitAs_column_alias = function (ctx: Parser.As_column_aliasContext): string {
         return ctx.column_alias().accept(this);
     };
 
 
     // Visit a parse tree produced by TSqlParser#as_table_alias.
-    public visitAs_table_alias = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitAs_table_alias = function (ctx: Parser.As_table_aliasContext): string {
+        return ctx.table_alias().accept(this);
     };
 
 
     // Visit a parse tree produced by TSqlParser#table_alias.
-    public visitTable_alias = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitTable_alias = function (ctx: Parser.Table_aliasContext): string {
+        if (ctx.with_table_hints()) {
+            console.warn('with_table_hints not supported at this moment');
+        }
+        return ctx.id().accept(this);
     };
 
 
@@ -2842,26 +2941,74 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#ranking_windowed_function.
-    public visitRanking_windowed_function = function (ctx) {
+    public visitRanking_windowed_function = function (ctx: Parser.Ranking_windowed_functionContext) {
         return this.visitChildren(ctx);
     };
 
 
     // Visit a parse tree produced by TSqlParser#aggregate_windowed_function.
-    public visitAggregate_windowed_function = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitAggregate_windowed_function = function (ctx: Parser.Aggregate_windowed_functionContext) {
+        if (ctx.GROUPING() || ctx.GROUPING_ID() || ctx.CHECKSUM_AGG()) {
+            throw new Error('grouping, grouping_id, checksum_agg will be supported in the future.');
+        }
+
+        let parameter: Exp.BaseExpression | '*';
+        if (ctx.all_distinct_expression()) {
+            parameter = ctx.all_distinct_expression().accept(this);
+        } else {
+            parameter = '*';
+        }
+
+        if (ctx.over_clause()) {
+            throw new Error('over_clause will be supported in the future');
+        }
+        
+        if (ctx.SUM()) {
+            return new Exp.AggregateFunctionExpression(Exp.AggregateTypeEnum.SUM, parameter);
+        } else if (ctx.AVG()) {
+            return new Exp.AggregateFunctionExpression(Exp.AggregateTypeEnum.AVG, parameter);
+        } else if (ctx.VAR()) {
+            return new Exp.AggregateFunctionExpression(Exp.AggregateTypeEnum.VAR, parameter);
+        } else if (ctx.VARP()) {
+            return new Exp.AggregateFunctionExpression(Exp.AggregateTypeEnum.VARP, parameter);
+        } else if (ctx.MAX()) {
+            return new Exp.AggregateFunctionExpression(Exp.AggregateTypeEnum.MAX, parameter);
+        } else if (ctx.MIN()) {
+            return new Exp.AggregateFunctionExpression(Exp.AggregateTypeEnum.MIN, parameter);
+        } else if (ctx.STDEV()) {
+            return new Exp.AggregateFunctionExpression(Exp.AggregateTypeEnum.STDEV, parameter);
+        } else if (ctx.STDEVP()) {
+            return new Exp.AggregateFunctionExpression(Exp.AggregateTypeEnum.STDEVP, parameter);
+        } else if (ctx.COUNT()) {
+            return new Exp.AggregateFunctionExpression(Exp.AggregateTypeEnum.COUNT, parameter);
+        } else if (ctx.COUNT_BIG()) {
+            return new Exp.AggregateFunctionExpression(Exp.AggregateTypeEnum.COUNT_BIG, parameter);
+        }
     };
 
 
     // Visit a parse tree produced by TSqlParser#analytic_windowed_function.
-    public visitAnalytic_windowed_function = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitAnalytic_windowed_function = function (ctx: Parser.Analytic_windowed_functionContext) {
+        throw new Error('analytic_windowed_function will be supported in the future')
+        if (ctx.LEAD()) {
+
+        } else if (ctx.LAG()) {
+
+        } else if (ctx.FIRST_VALUE()) {
+
+        } else if (ctx.LAST_VALUE()) {
+
+        }
     };
 
 
     // Visit a parse tree produced by TSqlParser#all_distinct_expression.
-    public visitAll_distinct_expression = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitAll_distinct_expression = function (ctx: Parser.All_distinct_expressionContext) {
+        let expression = ctx.expression().accept(this);
+        if (ctx.DISTINCT()) {
+            return new Exp.DistinctExpression(expression as Exp.BaseExpression);
+        }
+        return expression;
     };
 
 
@@ -2950,8 +3097,8 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#full_table_name.
-    public visitFull_table_name = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitFull_table_name = function (ctx: Parser.Full_table_nameContext): Table {
+        return new Table(ctx._table.accept(this));
     };
 
 
@@ -2995,8 +3142,12 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#full_column_name.
-    public visitFull_column_name = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitFull_column_name = function (ctx: Parser.Full_column_nameContext) {
+        if (!ctx._column_name) {
+            throw new Error('currently only column_name is supported in full_column_name');
+        }
+
+        return new Column(ctx._column_name.accept(this), ctx.table_name() ? ctx.table_name()._table.accept(this) : undefined);
     };
 
 
@@ -3115,7 +3266,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#constant.
-    public visitConstant = function (ctx: Parser.ConstantContext): PrimitiveValue {
+    public visitConstant = function (ctx: Parser.ConstantContext): Exp.PrimitiveValue {
         if (ctx.STRING()) {
             return ctx.STRING().text;
         }
@@ -3151,7 +3302,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#id.
-    public visitId = function (ctx: Parser.IdContext) {
+    public visitId = function (ctx: Parser.IdContext): string {
         if (ctx.DOUBLE_QUOTE_ID()) {
             return ctx.DOUBLE_QUOTE_ID().text;
         } else if (ctx.SQUARE_BRACKET_ID()) {
@@ -3164,11 +3315,12 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#simple_id.
-    public visitSimple_id = function (ctx: Parser.Simple_idContext) {
+    public visitSimple_id = function (ctx: Parser.Simple_idContext): string {
         if (ctx.ID()) {
             return ctx.ID().text;
+        } else {
+            return ctx.text;
         }
-        throw new Error('only ID is support in simple_id');
     };
 
 

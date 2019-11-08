@@ -1,8 +1,10 @@
-import { Table } from "./Table";
+import { Table, TableSource } from "./Table";
 import { BaseExpression } from "./Expression";
 
 export class Select {
     public selectList: SelectElement[];
+    public isDistinct: boolean;
+    public from?: TableSource[];
 }
 
 export class SelectElement {
