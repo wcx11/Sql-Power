@@ -1376,7 +1376,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
         if (ctx.order_by_clause()) {
             select.order = ctx.order_by_clause().accept(this);
         }
-        return select;
+        return select.execute();
     };
 
 
@@ -2616,7 +2616,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
         } else if (ctx.full_table_name()) {
             tableSource = ctx.full_table_name().accept(this);
         } else if (ctx.derived_table()) {
-            return ctx.derived_table().accept(this);
+            tableSource = ctx.derived_table().accept(this);
         } else if (ctx.rowset_function() || ctx.change_table() || ctx.function_call() || ctx.LOCAL_ID() || ctx.open_xml()) {
             throw new Error ('currently don\'t support rowset_function, change_table, function_call, LOCAL_ID, open_xml in table_source_item');
         } else {

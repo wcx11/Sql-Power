@@ -10,7 +10,22 @@ export class Expression {
 
 }
 
-export class LetExpression {
+export class LetExpression extends Expression {
+
+}
+
+export class AssignExpression extends Expression {
+    name: string;
+    value: Expression;
+}
+
+export class IfExpression extends Expression {
+    condition: ConditionExpression;
+    ifThen: Expression;
+    elseThen: Expression;
+}
+
+export class ConditionExpression extends Expression {
 
 }
 

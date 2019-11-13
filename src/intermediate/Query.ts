@@ -1,4 +1,4 @@
-import { JoinedTable as TableSource, Table } from './Table';
+import { TableSource, Table } from './Table';
 import { BaseExpression } from './Expression';
 import { SearchConditionExpression } from './Condition';
 
