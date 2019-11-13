@@ -1,26 +1,21 @@
-import { Table, TableSource } from "./Table";
+import { Query } from "./Query";
 import { BaseExpression } from "./Expression";
 
 export class Select {
-    public selectList: SelectElement[];
-    public isDistinct: boolean;
-    public from?: TableSource[];
+    query: Query;
+    order: Order;
 }
 
-export class SelectElement {
-    constructor(_selectType) {
-        this.selectType = _selectType;
+export class Order {
+    expression: BaseExpression;
+    orderType: OrderTypeEnum;
+
+    constructor() {
+        this.orderType = OrderTypeEnum.ASC;
     }
-    selectType: SelectTypeEnum;
-    relatedTable: Table;
-    columnName?: string;
-    columnAlias?: string;
-    expression?: BaseExpression;
 }
 
-export enum SelectTypeEnum {
-    ALL='ALL',
-    COLUMN='COLUMN',
-    EXPRESSION='EXPRESSION',
-    UDT='UDT'
+export enum OrderTypeEnum {
+    ASC = 'ASC',
+    DESC = 'DESC'
 }

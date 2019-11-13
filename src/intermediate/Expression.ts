@@ -1,5 +1,5 @@
 import { Column } from "./Table";
-import { Query } from "./Query";
+import { Select } from "./Select";
 
 export abstract class BaseExpression {
     public calculate () {}
@@ -72,8 +72,8 @@ export class OverClause {
 }
 
 export class SubqueryExpression extends BaseExpression {
-    public subquery: Query;
-    constructor (_subquery: Query) {
+    public subquery: Select;
+    constructor (_subquery: Select) {
         super();
         this.subquery = _subquery;
     }

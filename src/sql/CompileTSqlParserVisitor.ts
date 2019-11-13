@@ -1,11 +1,11 @@
 import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor'
 import { TSqlParserVisitor } from './grammar/TSqlParserVisitor';
 import * as Parser from './grammar/TSqlParser';
-import { SelectElement, SelectTypeEnum, Select } from '../intermediate/Select';
+import { Select, Order, OrderTypeEnum } from '../intermediate/Select';
 import { Table, Column, JoinedTable, TableSource, DerivedTable, JoinPart as JoinPart, JoinTypeEnum } from '../intermediate/Table';
 import { TerminalNode } from 'antlr4ts/tree/TerminalNode';
 import * as Exp from '../intermediate/Expression';
-import { Query } from '../intermediate/Query';
+import { Query, SelectElement, SelectTypeEnum } from '../intermediate/Query';
 import * as Condition from '../intermediate/Condition';
 
 export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> implements TSqlParserVisitor<any>{
@@ -1371,7 +1371,12 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
     // Visit a parse tree produced by TSqlParser#select_statement.
     public visitSelect_statement = function (ctx: Parser.Select_statementContext) {
         //TODO: support with_expression, order_by_clause, option_clause;
-        return ctx.query_expression().accept(this);
+        const select = new Select();
+        select.query = ctx.query_expression().accept(this);
+        if (ctx.order_by_clause()) {
+            select.order = ctx.order_by_clause().accept(this);
+        }
+        return select;
     };
 
 
@@ -2402,14 +2407,27 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
     // Visit a parse tree produced by TSqlParser#query_specification.
     public visitQuery_specification = function (ctx: Parser.Query_specificationContext): Query {
         let query = new Query();
-        query.select = new Select();
-        query.select.selectList = ctx.select_list().accept(this);
+        query.selectList = ctx.select_list().accept(this);
         if (ctx.FROM()) {
-            query.select.from = ctx.table_sources().accept(this);
+            query.from = ctx.table_sources().accept(this);
         }
 
         if (ctx.DISTINCT()) {
-            query.select.isDistinct = true;
+            query.isDistinct = true;
+        }
+
+        if (ctx.search_condition() && ctx.search_condition().length > 0) {
+            if (ctx.WHERE()) {
+                query.where = ctx.search_condition(0).accept(this);
+            }
+
+            if (ctx.HAVING()) {
+                query.having = ctx.search_condition(ctx.WHERE() ?  1 : 0).accept(this);
+            }
+        }
+
+        if (ctx.GROUP()) {
+            query.group = ctx.group_by_item().map(group => group.accept(this));
         }
 
         return query;
@@ -2435,8 +2453,9 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#order_by_clause.
-    public visitOrder_by_clause = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitOrder_by_clause = function (ctx: Parser.Order_by_clauseContext) {
+        // TODO support OFFSET FIRST NEXT ...
+        return ctx.order_by_expression().map(order => order.accept(this));
     };
 
 
@@ -2453,14 +2472,19 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#order_by_expression.
-    public visitOrder_by_expression = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitOrder_by_expression = function (ctx: Parser.Order_by_expressionContext) {
+        const order = new Order();
+        order.expression = ctx.expression().accept(this);
+        if (ctx.DESC()) {
+            order.orderType = OrderTypeEnum.DESC;
+        }
+        return order;
     };
 
 
     // Visit a parse tree produced by TSqlParser#group_by_item.
-    public visitGroup_by_item = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitGroup_by_item = function (ctx: Parser.Group_by_itemContext) {
+        return ctx.expression().accept(this);
     };
 
 

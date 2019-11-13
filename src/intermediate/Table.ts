@@ -1,5 +1,5 @@
-import { Query } from "./Query";
 import { SearchConditionExpression } from "./Condition";
+import { Select } from "./Select";
 
 export abstract class TableSource {
     alias?: string;
@@ -16,7 +16,7 @@ export class Table extends TableSource {
 }
 
 export class DerivedTable extends TableSource {
-    subQuery: Query;
+    subQuery: Select;
 }
 
 export class Rowset extends TableSource {

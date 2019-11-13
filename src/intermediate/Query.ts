@@ -1,11 +1,30 @@
-import { Select } from './Select';
-import { JoinedTable as TableSource } from './Table';
+import { JoinedTable as TableSource, Table } from './Table';
 import { BaseExpression } from './Expression';
+import { SearchConditionExpression } from './Condition';
+
+export class SelectElement {
+    constructor(_selectType) {
+        this.selectType = _selectType;
+    }
+    selectType: SelectTypeEnum;
+    relatedTable: Table;
+    columnName?: string;
+    columnAlias?: string;
+    expression?: BaseExpression;
+}
+
+export enum SelectTypeEnum {
+    ALL='ALL',
+    COLUMN='COLUMN',
+    EXPRESSION='EXPRESSION',
+    UDT='UDT'
+}
 
 export class Query {
-    select: Select;
-    from: TableSource[];
-    where: undefined;
-    having: undefined;
-    sort: undefined;
+    public selectList: SelectElement[];
+    public isDistinct: boolean;
+    public from?: TableSource[];
+    where: SearchConditionExpression;
+    having: SearchConditionExpression;
+    group: BaseExpression[];
 }
