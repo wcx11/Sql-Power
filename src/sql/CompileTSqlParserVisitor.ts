@@ -6,6 +6,7 @@ import { Table, Column, JoinedTable, TableSource, DerivedTable, JoinPart as Join
 import { TerminalNode } from 'antlr4ts/tree/TerminalNode';
 import * as Exp from '../intermediate/Expression';
 import { Query } from '../intermediate/Query';
+import * as Condition from '../intermediate/Condition';
 
 export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> implements TSqlParserVisitor<any>{
     // @Override
@@ -2198,7 +2199,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
         }
 
         if (ctx._op) {
-            return new Exp.BinaryExpression(ctx._op.text, ctx.expression(0).accept(this), ctx.expression(1).accept(this));
+            return new Exp.BinaryExpression(ctx._op.text as Exp.BinaryOperator, ctx.expression(0).accept(this), ctx.expression(1).accept(this));
         }
 
         if (ctx.bracket_expression()) {
@@ -2263,8 +2264,8 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#subquery.
-    public visitSubquery = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitSubquery = function (ctx: Parser.SubqueryContext) {
+        return ctx.select_statement().accept(this);
     };
 
 
@@ -2291,28 +2292,89 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
         return this.visitChildren(ctx);
     };
 
+    // Recursively calculate search condition or.
+    private calcuateSearchOr = function (searchAndList: Parser.Search_condition_andContext[]): Condition.SearchConditionExpression {
+        const [first, ...remain] = searchAndList;
+        if (searchAndList.length == 1) {
+            return first.accept(this);
+        } else {
+            return new Condition.OrExpression(first.accept(this), this.calculateSearchOr(remain));
+        }
+    }
+
+    // Recursively calculate search condition and.
+    private calculateSearchAnd = function (searchNotList: Parser.Search_condition_notContext[]): Condition.SearchConditionExpression {
+        const [first, ...remain] = searchNotList;
+        if (searchNotList.length == 1) {
+            return first.accept(this);
+        } else {
+            return new Condition.AndExpression(first.accept(this), this.calculateSearchAnd(remain));
+        }
+    }
 
     // Visit a parse tree produced by TSqlParser#search_condition.
-    public visitSearch_condition = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitSearch_condition = function (ctx: Parser.Search_conditionContext): Condition.SearchConditionExpression {
+        return this.calculateSearchOr(ctx.search_condition_and());
     };
 
 
     // Visit a parse tree produced by TSqlParser#search_condition_and.
-    public visitSearch_condition_and = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitSearch_condition_and = function (ctx: Parser.Search_condition_andContext): Condition.SearchConditionExpression {
+        return this.calculateSearchAnd(ctx.search_condition_not());
     };
 
 
     // Visit a parse tree produced by TSqlParser#search_condition_not.
-    public visitSearch_condition_not = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitSearch_condition_not = function (ctx: Parser.Search_condition_notContext) {
+        if (ctx.NOT()) {
+            return new Condition.NotExpression(ctx.predicate().accept(this));
+        } else {
+            return ctx.predicate().accept(this);
+        }
     };
 
 
     // Visit a parse tree produced by TSqlParser#predicate.
-    public visitPredicate = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitPredicate = function (ctx: Parser.PredicateContext): Condition.SearchConditionExpression {
+        if (ctx.EXISTS()) {
+            return new Condition.CheckNullExpression(false, new Exp.SubqueryExpression(ctx.subquery().accept(this)));
+        } else if (ctx.comparison_operator()) {
+            if (ctx.subquery()) {
+                return new Condition.ListComparisonExpression(
+                    ctx.comparison_operator().accept(this),
+                    ctx.expression(0).accept(this),
+                    ctx.subquery().accept(this),
+                    ctx.ALL() ? Condition.ComparisonTypeEnum.ALL : Condition.ComparisonTypeEnum.ANY
+                );
+            } else {
+                return new Condition.ComparisonExpression(ctx.comparison_operator().accept(this), ctx.expression(0).accept(this), ctx.expression(1).accept(this));
+            }
+        } else if (ctx.BETWEEN()) {
+            if (ctx.NOT()) {
+                return new Condition.OrExpression(
+                    new Condition.ComparisonExpression('<', ctx.expression(0).accept(this), ctx.expression(1).accept(this)),
+                    new Condition.ComparisonExpression('>', ctx.expression(0).accept(this), ctx.expression(2).accept(this))
+                );
+            } else {
+                return new Condition.AndExpression(
+                    new Condition.ComparisonExpression('>=', ctx.expression(0).accept(this), ctx.expression(1).accept(this)),
+                    new Condition.ComparisonExpression('<=', ctx.expression(0).accept(this), ctx.expression(2).accept(this))
+                );
+            }
+        } else if (ctx.IN()) {
+            return new Condition.ListComparisonExpression(
+                '=',
+                ctx.expression(0).accept(this),
+                ctx.subquery() ? ctx.subquery().accept(this) : ctx.expression_list().accept(this),
+                Condition.ComparisonTypeEnum.ANY
+            );
+        } else if (ctx.LIKE()) {
+            return new Condition.LikeExpression();
+        } else if (ctx.IS()) {
+            return new Condition.CheckNullExpression(!ctx.null_notnull().NOT(), ctx.expression(0).accept(this));
+        } else if (ctx.search_condition()) {
+            return ctx.search_condition().accept(this);
+        }
     };
 
 
@@ -2935,7 +2997,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#expression_list.
-    public visitExpression_list = function (ctx) {
+    public visitExpression_list = function (ctx: Parser.Expression_listContext): Exp.BaseExpression[] {
         return this.visitChildren(ctx);
     };
 
@@ -3325,8 +3387,8 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#comparison_operator.
-    public visitComparison_operator = function (ctx) {
-        return this.visitChildren(ctx);
+    public visitComparison_operator = function (ctx: Parser.Comparison_operatorContext): Condition.ComparisonOperator {
+        return ctx.text as Condition.ComparisonOperator;
     };
 
 

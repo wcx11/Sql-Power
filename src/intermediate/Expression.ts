@@ -1,4 +1,5 @@
 import { Column } from "./Table";
+import { Query } from "./Query";
 
 export abstract class BaseExpression {
     public calculate () {}
@@ -8,23 +9,27 @@ export class PrimitiveExpression extends BaseExpression {
     public value: PrimitiveValue;
 }
 
+export type UnaryOperator = '-' | '~';
+
 export class UnaryExpression extends BaseExpression {
-    op: string;
+    op: UnaryOperator;
     public expression: BaseExpression;
 
-    constructor(_op: string, _expression: BaseExpression) {
+    constructor(_op: UnaryOperator, _expression: BaseExpression) {
         super();
         this.op = _op;
         this.expression = _expression;
     }
 }
 
+export type BinaryOperator = '*' | '/' | '%' | '+' | '-' | '&' | '^' | '|' | '||';
+
 export class BinaryExpression extends BaseExpression {
-    public op: string;
+    public op: BinaryOperator;
     public left: BaseExpression;
     public right: BaseExpression;
 
-    constructor(_op: string, _left: BaseExpression, _right: BaseExpression) {
+    constructor(_op: BinaryOperator, _left: BaseExpression, _right: BaseExpression) {
         super();
         this.op = _op;
         this.left = _left;
@@ -64,6 +69,14 @@ export class OverClause {
     public partitionExpressionList?: BaseExpression[];
     public orderByClause?;
     public rowOrRangeClause?;
+}
+
+export class SubqueryExpression extends BaseExpression {
+    public subquery: Query;
+    constructor (_subquery: Query) {
+        super();
+        this.subquery = _subquery;
+    }
 }
 
 export enum AggregateTypeEnum {

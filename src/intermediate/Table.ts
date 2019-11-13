@@ -1,5 +1,5 @@
 import { Query } from "./Query";
-import { SearchCondition } from "./condition";
+import { SearchConditionExpression } from "./Condition";
 
 export abstract class TableSource {
     alias?: string;
@@ -25,14 +25,14 @@ export class Rowset extends TableSource {
 
 export class JoinedTable extends TableSource {
     tableSource: TableSource;
-    joinPart: JoinPart[];
+    joinPart?: JoinPart[];
     alias?: string;
 }
 
 export class JoinPart {
     tableSource?: TableSource;
     joinType: JoinTypeEnum;
-    joinCondition?: SearchCondition;
+    joinCondition?: SearchConditionExpression;
 }
 
 export enum JoinTypeEnum {
