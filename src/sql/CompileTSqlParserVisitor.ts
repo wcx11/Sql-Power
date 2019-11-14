@@ -1376,7 +1376,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
         if (ctx.order_by_clause()) {
             select.order = ctx.order_by_clause().accept(this);
         }
-        return select.execute();
+        return select.generateM();
     };
 
 

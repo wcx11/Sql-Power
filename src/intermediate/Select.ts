@@ -6,7 +6,7 @@ export class Select {
     query: Query;
     order: Order;
 
-    public execute() {
+    public generateM() {
         let variableStack: VariableStack = new VariableStack();
         variableStack.push({});
         let sourceList: any[] = [];

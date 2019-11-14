@@ -21,6 +21,21 @@ export class VariableStack {
 
         return this.sheets[this.sheets.length - 1];
     }
+
+    public depth(): number {
+        return this.sheets.length;
+    }
+
+    public getName(suggest: string) {
+        let replaceName: string = suggest;
+        let offset = 1;
+        while (Object.keys(this.top()).indexOf(replaceName) >= 0) {
+            replaceName = suggest + "_" + offset;
+            offset++;
+        }
+        this.top()[replaceName] = suggest;
+        return replaceName;
+    }
 }
 
-export type VariableSheet = {[name: string]: M.Expression}
+export type VariableSheet = {[name: string]: string}

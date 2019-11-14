@@ -2,10 +2,11 @@ import { SearchConditionExpression } from "./Condition";
 import { Select } from "./Select";
 import * as M from "../m/M";
 import { VariableStack } from "../m/Variable";
+import * as Functions from "../m/Functions";
 
 export abstract class TableSource {
     alias?: string;
-    public abstract generateM(variableStack: VariableStack);
+    public abstract generateM(variableStack: VariableStack): M.AssignExpression[];
 }
 
 export class Table extends TableSource {
@@ -17,8 +18,11 @@ export class Table extends TableSource {
         this.name = _name;
     }
 
-    public generateM(variableStack: VariableStack): M.Expression {
-        return new M.AssignExpression();
+    public generateM(variableStack: VariableStack): M.AssignExpression[] {
+        return [new M.AssignExpression(
+            variableStack.getName(this.alias || this.name),
+            Functions.importSourceFromExcel(this.name)
+        )];
     }
 }
 
@@ -26,23 +30,36 @@ export class DerivedTable extends TableSource {
     subQuery: Select;
     alias: string;
 
-    public generateM(variableStack: VariableStack): M.Expression {
-        return new M.AssignExpression();
+    public generateM(variableStack: VariableStack): M.AssignExpression[] {
+        return [new M.AssignExpression(
+            variableStack.getName(this.alias || 'Source'), 
+            this.subQuery.generateM()
+        )];
     }
 }
 
 export class Rowset extends TableSource {
-    public generateM(variableStack: VariableStack): M.Expression {
-        return null;
+    public generateM(variableStack: VariableStack): M.AssignExpression[] {
+        return [];
     }
 }
 
 export class JoinedTable extends TableSource {
     tableSource: TableSource;
-    joinPart?: JoinPart[];
+    joinPart: JoinPart[];
 
-    public generateM(variableStack: VariableStack): M.Expression {
-        return new M.AssignExpression();
+    public generateM(variableStack: VariableStack): M.AssignExpression[] {
+        let joinPartMExpression : M.AssignExpression[] = [];
+        this.joinPart.forEach(join => {
+            if (join.tableSource) {
+                joinPartMExpression.push(...this.tableSource.generateM(variableStack));
+            }
+        });
+        let joinedTableMExpression: M.AssignExpression = new M.AssignExpression(
+            variableStack.getName('joinedTable'),
+            null //TODO: calculate joined table.
+        );
+        return [...this.tableSource.generateM(variableStack), ...joinPartMExpression, joinedTableMExpression];
     }
 }
 
