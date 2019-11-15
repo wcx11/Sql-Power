@@ -1,6 +1,7 @@
 import { Query } from "./Query";
 import { BaseExpression } from "./Expression";
 import { VariableStack } from "../m/Variable";
+import { LetExpression } from "../m/M";
 
 export class Select {
     query: Query;
@@ -8,10 +9,10 @@ export class Select {
 
     public generateM() {
         let variableStack: VariableStack = new VariableStack();
-        variableStack.push({});
-        let sourceList: any[] = [];
+        const letExpression = new LetExpression();
+        variableStack.newScope();
         if (this.query.from) {
-            sourceList = this.query.from.map(table => table.generateM(variableStack));
+            letExpression.let.push(...this.query.from.map(table => table.generateM(variableStack)));
         }
     }
 }

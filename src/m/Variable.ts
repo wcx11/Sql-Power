@@ -1,41 +1,69 @@
 import * as M from './M';
 
 export class VariableStack {
-    public sheets: VariableSheet[];
+    private scopeStart: number[];
+    private variables: Variable[];
     constructor () {
-        this.sheets = [];
+        this.variables = [];
+        this.scopeStart = [-1];
     }
 
-    public push(variableSheet: VariableSheet) {
-        this.sheets.push(variableSheet);
+    public push(variable: Variable) {
+        this.variables.push(variable);
     }
 
-    public pop(): VariableSheet {
-        return this.sheets.pop();
+    public pop(): Variable {
+        return this.variables.pop();
     }
 
-    public top(): VariableSheet {
-        if (this.sheets.length == 0) {
+    public top(): Variable {
+        if (this.variables.length == 0) {
             return null;
         }
 
-        return this.sheets[this.sheets.length - 1];
+        return this.variables[this.variables.length - 1];
+    }
+
+    public endScope(): number {
+        if (this.getCurrentScopeStart() < 0) {
+            return -1;
+        }
+
+        this.variables.length = this.scopeStart.pop();
+        return this.variables.length;
+    }
+
+    public newScope() {
+        this.scopeStart.push(this.variables.length);
     }
 
     public depth(): number {
-        return this.sheets.length;
+        return this.variables.length;
+    }
+
+    public getCurrentScopeStart(): number {
+        return this.scopeStart[this.scopeStart.length - 1];
+    }
+
+    public getCurrentScope(): Variable[] {
+        return this.variables.slice(this.getCurrentScopeStart(), this.depth());
     }
 
     public getName(suggest: string) {
         let replaceName: string = suggest;
         let offset = 1;
-        while (Object.keys(this.top()).indexOf(replaceName) >= 0) {
+        let currentScope = this.getCurrentScope();
+        while (currentScope.find((v) => {v.name === replaceName})) {
             replaceName = suggest + "_" + offset;
             offset++;
         }
-        this.top()[replaceName] = suggest;
+        
         return replaceName;
     }
 }
 
-export type VariableSheet = {[name: string]: string}
+export class Variable {
+    name: string;
+    originName: string;
+    type?: string;
+}
