@@ -21,12 +21,16 @@ export function Table_ColumnNames(table: M.ExpressionOrConst): M.InvokeFunctionE
     return new M.InvokeFunctionExpression('Table.ColumnNames', table);
 }
 
+export function Table_Distinct(table): M.InvokeFunctionExpression {
+    return new M.InvokeFunctionExpression('Table.Distinct', table);
+}
+
 export function Table_FromRecords(records: M.ExpressionOrConst): M.InvokeFunctionExpression {
     return new M.InvokeFunctionExpression('Table.FromRecords', records);
 }
 
-export function Table_Group(table: M.ExpressionOrConst, keys: M.ExpressionOrConst[], aggregatedColumns: any[]) {
-    return new M.InvokeFunctionExpression('Table.Group', table, new M.List(keys), new M.List(aggregatedColumns));
+export function Table_Group(table: M.ExpressionOrConst, keys: M.ExpressionOrConst, aggregatedColumns: any[]) {
+    return new M.InvokeFunctionExpression('Table.Group', table, keys,new M.List(aggregatedColumns));
 }
 
 export function Table_RenameColumns(table: M.Expression, oldNames: M.ExpressionOrConst, newNames: M.ExpressionOrConst) {
@@ -64,6 +68,10 @@ export function Table_ToRecords(table: M.Expression) {
     return new M.InvokeFunctionExpression('Table.ToRecords', table);
 }
 
+export function Table_SelectRows(table: M.ExpressionOrConst, condition: M.ExpressionOrConst): M.InvokeFunctionExpression {
+    return new M.InvokeFunctionExpression('Table.SelectRows', table, condition);
+}
+
 export function List_Accumulate(list: M.ExpressionOrConst, seed: M.ExpressionOrConst, accumulator: M.ExpressionOrConst): M.InvokeFunctionExpression {
     return new M.InvokeFunctionExpression('List.Accumulate', list, seed, accumulator);
 }
@@ -88,6 +96,10 @@ export function List_Count(list: M.ExpressionOrConst): M.InvokeFunctionExpressio
     return new M.InvokeFunctionExpression('List.Count', list);
 }
 
+export function List_Contains(list: M.ExpressionOrConst, value: M.ExpressionOrConst): M.InvokeFunctionExpression {
+    return new M.InvokeFunctionExpression('List.Contains', list, value);
+}
+
 export function List_Distinct(list: M.ExpressionOrConst): M.InvokeFunctionExpression {
     return new M.InvokeFunctionExpression('List.Distinct', list);
 }
@@ -102,6 +114,14 @@ export function List_InsertRangeAtLast(list: M.ExpressionOrConst, values: M.Expr
 
 export function List_InsertRange(list: M.ExpressionOrConst, index: M.ExpressionOrConst, values: M.ExpressionOrConst): M.InvokeFunctionExpression {
     return new M.InvokeFunctionExpression('List.InsertRange', list, index, values);
+}
+
+export function List_Max(list: M.ExpressionOrConst): M.InvokeFunctionExpression {
+    return new M.InvokeFunctionExpression('List.Max', list);
+}
+
+export function List_Min(list: M.ExpressionOrConst): M.InvokeFunctionExpression {
+    return new M.InvokeFunctionExpression('List.Min', list);
 }
 
 export function List_StandardDeviation(list: M.ExpressionOrConst): M.InvokeFunctionExpression {
@@ -152,14 +172,18 @@ export function Number_Mod(number: M.ExpressionOrConst, divisor: M.ExpressionOrC
     return new M.InvokeFunctionExpression('Number.Mod', number, divisor);
 }
 
+export function Number_ToText(number: M.ExpressionOrConst) {
+    return new M.InvokeFunctionExpression('Number.ToText', number);
+}
+
 export function Record_Combine(recoreds: M.ExpressionOrConst[]): M.InvokeFunctionExpression {
     return new M.InvokeFunctionExpression('Record.Combine', new M.List(recoreds));
 }
 
-export function selectRowsFromTable() {
-    
+export function Custom_CheckColumnName(tableName: M.ExpressionOrConst, suggestName: M.ExpressionOrConst, reservedNames: M.ExpressionOrConst, step: M.ExpressionOrConst) {
+    return new M.InvokeFunctionExpression('Custom.CheckColumnName', tableName, suggestName, reservedNames, step);
 }
 
-export function selectColumnsFromTable() {
-
+export function Custom_GetTableName(columnName: M.ExpressionOrConst, metaList: M.ExpressionOrConst) {
+    return new M.InvokeFunctionExpression('Custom.GetTableName', columnName, metaList);
 }

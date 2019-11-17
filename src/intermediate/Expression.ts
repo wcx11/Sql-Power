@@ -88,27 +88,23 @@ export class AggregateFunctionExpression extends BaseExpression {
             case AggregateTypeEnum.SUM:
                 return Functions.List_Sum((this.parameter as BaseExpression).generateM(variableStack, globalInfo));
             case AggregateTypeEnum.AVG:
-                break;
+                return Functions.List_Average((this.parameter as BaseExpression).generateM(variableStack, globalInfo));
             case AggregateTypeEnum.COUNT:
                 if (this.parameter instanceof BaseExpression) {
-
+                    return Functions.List_Count((this.parameter as BaseExpression).generateM(variableStack, globalInfo))
                 } else {
-                    return Functions.List_Sum(globalInfo[0]);
+                    return Functions.List_Count(globalInfo[GlobalKeyEnum.TABLE]);
                 }
             case AggregateTypeEnum.STDEV:
-                break;
-            case AggregateTypeEnum.STDEVP:
-                break;
+                return Functions.List_StandardDeviation((this.parameter as BaseExpression).generateM(variableStack, globalInfo));
             case AggregateTypeEnum.MAX:
-                break;
+                return Functions.List_Max((this.parameter as BaseExpression).generateM(variableStack, globalInfo));
             case AggregateTypeEnum.MIN:
-                break;
+                return Functions.List_Min((this.parameter as BaseExpression).generateM(variableStack, globalInfo));
             case AggregateTypeEnum.VAR:
-                break;
             case AggregateTypeEnum.VARP:
-                break;
+            case AggregateTypeEnum.STDEVP:
             case AggregateTypeEnum.COUNT_BIG:
-                break;
             default:
                 throw new Error('unsupported aggregate function');
         }
@@ -139,14 +135,7 @@ export class ColumnExpression extends BaseExpression {
         if (this.column.tableNameOrAlias) {
             return new M.FieldAccessExpression(globalInfo[GlobalKeyEnum.TABLE], `${this.column.tableNameOrAlias}.${this.column.columnName}`);
         } else {
-            const fullColumnName_M = Functions.Text_Combine([new M.FieldAccessExpression(
-                new M.IndexAccessExpression(
-                    Functions.List_Select(
-                        globalInfo[GlobalKeyEnum.META],
-                        new M.EachExpression(new M.ComparisionExpression('=',new M.FieldAccessExpression(null, METAKEY_COLUMNNAME), new M.StringExpression(this.column.columnName)))
-                    ),
-                0
-            ), METAKEY_TABLENAME), new M.StringExpression(this.column.columnName)], new M.StringExpression('.'));
+            const fullColumnName_M = Functions.Custom_GetTableName(new M.StringExpression(this.column.columnName), globalInfo[GlobalKeyEnum.META_LIST_M]);
             return Functions.Record_Field(globalInfo[GlobalKeyEnum.TABLE], fullColumnName_M);
         }
     }

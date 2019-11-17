@@ -74,11 +74,13 @@ export function joinTwoTable(left: M.Expression, right: M.Expression, joinType: 
                         new M.List([]),
                         new M.FunctionDefinationExpression(
                             [paraInnerAcc, paraRightRow],
+                            joinCondition ?
                             new M.IfExpression(
-                                joinCondition ? joinCondition.generateM(variableStack, {'TABLE': new M.BinaryExpression('&', paraLeftRow, paraRightRow), 'META': new M.BinaryExpression('&', leftMeta_M, rightMeta_M)}) : true,
+                                joinCondition.generateM(variableStack, {'TABLE': new M.BinaryExpression('&', paraLeftRow, paraRightRow), 'META': new M.BinaryExpression('&', leftMeta_M, rightMeta_M)}),
                                 new M.BinaryExpression('&', paraInnerAcc, new M.List([new M.BinaryExpression('&', paraLeftRow, paraRightRow)])),
                                 paraInnerAcc
-                            )
+                            ) :
+                            new M.BinaryExpression('&', paraInnerAcc, new M.List([new M.BinaryExpression('&', paraLeftRow, paraRightRow)]))
                         )
                     )
                 )
@@ -89,6 +91,8 @@ export function joinTwoTable(left: M.Expression, right: M.Expression, joinType: 
     return new M.AddMetaExpression(Functions.Table_FromRecords(joined), new M.Record([[META_COLUMNINFO, new M.BinaryExpression('&', leftMeta_M, rightMeta_M)]]));
 }
 
+// when there are multiple tables in from clause: select * from table1, table2, table3, ...
+// the actual table source is the inner joined result of the tables without condition
 export function combineTables(tables: M.Expression[], variableStack: VariableStack) {
     if (!tables || tables.length === 0) {
         return null;
@@ -101,3 +105,35 @@ export function combineTables(tables: M.Expression[], variableStack: VariableSta
         return combineTables([joinTwoTable(first, second, JoinTypeEnum.INNER, null, variableStack, {}), ...remain], variableStack);
     }
 }
+
+export const customGetTableName = new M.AssignExpression('Custom.GetTableName', new M.FunctionDefinationExpression(
+    ['columnName', 'metaList'],
+    new M.FieldAccessExpression(
+        new M.IndexAccessExpression(
+            Functions.List_Select(
+                'metaList',
+                new M.EachExpression(new M.ComparisionExpression('=',new M.FieldAccessExpression(null, METAKEY_COLUMNNAME), 'columnName'))
+            ),
+        0
+    ), METAKEY_TABLENAME)
+));
+
+export const customCheckColumnName = new M.AssignExpression('Custom.CheckColumnName', new M.FunctionDefinationExpression(
+    ['tableName', 'suggestName', 'reservedNames', 'step'],
+    new M.IfExpression(
+        Functions.List_Contains(
+            'reservedNames',
+            new M.IfExpression(
+                new M.ComparisionExpression('=', 'step', 0),
+                Functions.Text_Combine(['tableName', 'suggestName'], new M.StringExpression('.')),
+                new M.BinaryExpression('&', Functions.Text_Combine(['tableName', 'suggestName'], new M.StringExpression('.')), Functions.Number_ToText('step'))
+            )
+        ),
+        new M.InvokeFunctionExpression('@Custom.CheckColumnName', 'tableName', 'suggestName', 'reservedNames', new M.BinaryExpression('+', 'step', 1)),
+        new M.IfExpression(
+            new M.ComparisionExpression('=', 'step', 0),
+            'suggestName',
+            new M.BinaryExpression('&', 'suggestName', Functions.Number_ToText('step'))
+        )
+    )
+));

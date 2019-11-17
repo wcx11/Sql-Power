@@ -140,8 +140,10 @@ export class ColumnInfo {
 
 export enum GlobalKeyEnum {
     TABLE = 'TABLE',
-    META = 'META',
-    SOURCE = 'SOURCE'
+    META_LIST_M = 'META',
+    SELECT_M = 'SELECT',
+    SOURCE = 'SOURCE',
+    RESERVED_M = 'RESERVED'
 }
 
 export const METAKEY_COLUMNNAME = 'columnName';

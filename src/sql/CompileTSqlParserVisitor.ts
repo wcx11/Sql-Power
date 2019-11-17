@@ -2523,7 +2523,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
     public visitAsterisk = function (ctx: Parser.AsteriskContext) {
         let element = new SelectElement(SelectTypeEnum.ALL);
         if (ctx.table_name()) {
-            element.relatedTable = new Table(ctx.table_name().accept(this));
+            element.relatedTable = ctx.table_name().accept(this);
         }
         return element;
     };
@@ -2533,11 +2533,11 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
     public visitColumn_elem = function (ctx: Parser.Column_elemContext): SelectElement {
         let element = new SelectElement(SelectTypeEnum.COLUMN);
         if (ctx.table_name()) {
-            element.relatedTable = new Table(ctx.table_name().accept(this));
+            element.relatedTable = ctx.table_name().accept(this);
         }
 
         if (ctx._column_name) {
-            element.columnName = ctx._column_name.accept(this);
+            element.column = new Exp.ColumnExpression(new Column(ctx._column_name.accept(this), ctx.table_name() ? ctx.table_name().accept(this) : undefined));
         }
 
         if (ctx.as_column_alias()) {

@@ -17,7 +17,7 @@ export class Value extends Expression {
 export class List extends Value {
     items: ExpressionOrConst[];
 
-    constructor(_items) {
+    constructor(_items: ExpressionOrConst[]) {
         super();
         this.items = _items;
     }
@@ -77,7 +77,7 @@ export class InvokeFunctionExpression extends Expression {
     }
 
     public toString() {
-        return `${this.name}(${this.parameters.map(para => para ? para.toString() : 'null').join(',')})`;
+        return `${this.name}(${this.parameters.map(para => !(para===undefined || para===null) ? para.toString() : 'null').join(',')})`;
     }
 }
 
