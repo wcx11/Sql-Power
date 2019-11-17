@@ -1,12 +1,22 @@
 import { Column } from "./Table";
 import { Select } from "./Select";
+import { VariableStack, GlobalKeyEnum } from "../m/Variable";
+import * as M from '../m/M';
+import * as Functions from '../m/Functions';
 
 export abstract class BaseExpression {
-    public calculate () {}
+    public abstract generateM (variableStack: VariableStack, globalInfo: {[key: string]: any}): M.ExpressionOrConst;
 }
 
 export class PrimitiveExpression extends BaseExpression {
     public value: PrimitiveValue;
+
+    public generateM(variableStack: VariableStack, globalInfo: {[key: string]: any}): M.ExpressionOrConst {
+        if (typeof(this.value) === 'string') {
+            return new M.StringExpression(this.value);
+        }
+        return this.value;
+    }
 }
 
 export type UnaryOperator = '-' | '~';
@@ -19,6 +29,12 @@ export class UnaryExpression extends BaseExpression {
         super();
         this.op = _op;
         this.expression = _expression;
+    }
+
+    public generateM(variableStack: VariableStack, globalInfo: {[key: string]: any}): M.ExpressionOrConst {
+        if (this.op === '-') {
+            return new M.NegativeExpression(this.expression.generateM(variableStack, globalInfo));
+        }
     }
 }
 
@@ -35,6 +51,26 @@ export class BinaryExpression extends BaseExpression {
         this.left = _left;
         this.right = _right;
     }
+
+    public generateM(variableStack: VariableStack, globalInfo: {[key: string]: any}): M.Expression {
+        switch (this.op) {
+            case '+':
+            case '-':
+            case '*':
+            case '/':
+                return new M.BinaryExpression(this.op as M.BinaryOperator, this.left.generateM(variableStack, globalInfo), this.right.generateM(variableStack, globalInfo));
+            case '&':
+                return Functions.Number_BitwiseAnd(this.left.generateM(variableStack, globalInfo), this.right.generateM(variableStack, globalInfo));
+            case '|':
+                return Functions.Number_BitwiseOr(this.left.generateM(variableStack, globalInfo), this.right.generateM(variableStack, globalInfo));
+            case '^':
+                return Functions.Number_BitwiseXor(this.left.generateM(variableStack, globalInfo), this.right.generateM(variableStack, globalInfo));
+            case '%':
+                return Functions.Number_Mod(this.left.generateM(variableStack, globalInfo), this.right.generateM(variableStack, globalInfo));
+            default:
+                throw new Error('only + - * / & | ^ % are supported as binary operator');
+        }
+    }
 }
 
 export class AggregateFunctionExpression extends BaseExpression {
@@ -46,6 +82,37 @@ export class AggregateFunctionExpression extends BaseExpression {
         this.aggregateType = _aggregateType;
         this.parameter = _parameter;
     }
+
+    public generateM(variableStack: VariableStack, globalInfo: {[key: string]: any}) {
+        switch (this.aggregateType) {
+            case AggregateTypeEnum.SUM:
+                return Functions.List_Sum((this.parameter as BaseExpression).generateM(variableStack, globalInfo));
+            case AggregateTypeEnum.AVG:
+                break;
+            case AggregateTypeEnum.COUNT:
+                if (this.parameter instanceof BaseExpression) {
+
+                } else {
+                    return Functions.List_Sum(globalInfo[0]);
+                }
+            case AggregateTypeEnum.STDEV:
+                break;
+            case AggregateTypeEnum.STDEVP:
+                break;
+            case AggregateTypeEnum.MAX:
+                break;
+            case AggregateTypeEnum.MIN:
+                break;
+            case AggregateTypeEnum.VAR:
+                break;
+            case AggregateTypeEnum.VARP:
+                break;
+            case AggregateTypeEnum.COUNT_BIG:
+                break;
+            default:
+                throw new Error('unsupported aggregate function');
+        }
+    }
 }
 
 export class DistinctExpression extends BaseExpression {
@@ -55,6 +122,10 @@ export class DistinctExpression extends BaseExpression {
         super();
         this.expression = _expression;
     }
+
+    public generateM(variableStack: VariableStack, globalInfo: {[key: string]: any}) {
+        return Functions.List_Distinct(this.expression.generateM(variableStack, globalInfo));
+    }
 }
 
 export class ColumnExpressoin extends BaseExpression {
@@ -62,6 +133,19 @@ export class ColumnExpressoin extends BaseExpression {
     constructor(_column: Column) {
         super();
         this.column = _column;
+    }
+
+    public generateM(variableStack: VariableStack, globalInfo: {[key: string]: any}) {
+        const fullColumnName_M = this.column.tableNameOrAlias ?
+        `${this.column.tableNameOrAlias}.${this.column.columnName}` :
+        new M.FieldAccessExpression(new M.IndexAccessExpression(
+            new M.ItemAccessExpression(
+                globalInfo[GlobalKeyEnum.META],
+                new M.Record([['columnName', new M.StringExpression(this.column.columnName)]])
+                ),
+            0
+        ), 'tableName');
+        return new M.FieldAccessExpression(globalInfo[GlobalKeyEnum.TABLE], fullColumnName_M)
     }
 }
 
@@ -76,6 +160,10 @@ export class SubqueryExpression extends BaseExpression {
     constructor (_subquery: Select) {
         super();
         this.subquery = _subquery;
+    }
+
+    public generateM(variableStack: VariableStack) {
+        return this.subquery.generateM();
     }
 }
 

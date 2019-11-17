@@ -59,7 +59,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
     // Visit a parse tree produced by TSqlParser#dml_clause.
     public visitDml_clause = function (ctx: Parser.Dml_clauseContext) {
         if (ctx.select_statement()) {
-            return ctx.select_statement().accept(this);
+            return ctx.select_statement().accept(this).toString();
         } else {
             throw new Error('currently only select_statement is supported in dml_clause');
         }
@@ -2374,6 +2374,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
                 Condition.ComparisonTypeEnum.ANY
             );
         } else if (ctx.LIKE()) {
+            // TODO: support like
             return new Condition.LikeExpression();
         } else if (ctx.IS()) {
             return new Condition.CheckNullExpression(!ctx.null_notnull().NOT(), ctx.expression(0).accept(this));

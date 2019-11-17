@@ -7,7 +7,9 @@ import * as Utils from '../m/Utils';
 
 export abstract class TableSource {
     alias?: string;
-    public abstract generateM(variableStack: VariableStack);
+    protected variableName?: string;
+    public abstract generateM(variableStack: VariableStack): M.Expression;
+    public abstract getVariableName(variableStack: VariableStack): string;
 }
 
 export class Table extends TableSource {
@@ -19,13 +21,15 @@ export class Table extends TableSource {
         this.name = _name;
     }
 
-    public generateM(variableStack: VariableStack): M.AssignExpression {
-        const sourceExpression = Functions.importSourceFromExcel(this.name);
-        const transformedTable = Utils.
-        return new M.AssignExpression(
-            variableStack.getName(this.alias || this.name),
-            transformedTable
-        );
+    public generateM(variableStack: VariableStack): M.Expression {
+        return Utils.importSourceFromExcel(this.name, variableStack);
+    }
+
+    public getVariableName(variableStack: VariableStack): string {
+        if (!this.variableName) {
+            this.variableName = variableStack.getName(this.alias || this.name);
+        }
+        return this.variableName;
     }
 }
 
@@ -33,37 +37,46 @@ export class DerivedTable extends TableSource {
     subQuery: Select;
     alias: string;
 
-    public generateM(variableStack: VariableStack): M.AssignExpression {
-        return new M.AssignExpression(
-            variableStack.getName(this.alias || 'Source'), 
-            this.subQuery.generateM()
-        );
+    public generateM(variableStack: VariableStack): M.Expression {
+        return Utils.addMetaToTable(this.subQuery.generateM(), this.alias, true, variableStack);
+    }
+
+    public getVariableName(variableStack: VariableStack) {
+        if (!this.variableName) {
+            this.variableName = variableStack.getName(this.alias || 'subQuery');
+        }
+        return this.variableName;
     }
 }
 
-export class Rowset extends TableSource {
+/*export class Rowset extends TableSource {
     public generateM(variableStack: VariableStack): M.AssignExpression {
         return null;
     }
-}
+}*/
 
 export class JoinedTable extends TableSource {
     tableSource: TableSource;
     joinPart: JoinPart[];
 
-    public generateM(variableStack: VariableStack): M.AssignExpression {
-        let joinPartMExpression : M.AssignExpression[] = [];
+    public generateM(variableStack: VariableStack): M.Expression {
+        let joined_M : M.Expression = this.tableSource.generateM(variableStack);
         this.joinPart.forEach(join => {
             if (join.tableSource) {
-                joinPartMExpression.push(...this.tableSource.generateM(variableStack));
+                joined_M = Utils.joinTwoTable(joined_M, join.tableSource.generateM(variableStack), join.joinType, join.joinCondition, variableStack, {});
+            } else {
+                throw new Error ('pivot and unpivot will be supported in the future');
             }
         });
 
-        let joinedTableMExpression: M.AssignExpression = new M.AssignExpression(
-            variableStack.getName('joinedTable'),
-            null //TODO: calculate joined table.
-        );
-        return joinedTableMExpression;
+        return joined_M;
+    }
+
+    public getVariableName(variableStack: VariableStack) {
+        if (!this.variableName) {
+            this.variableName = variableStack.getName('joinedTable');
+        }
+        return this.variableName;
     }
 }
 
