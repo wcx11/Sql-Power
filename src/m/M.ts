@@ -36,7 +36,7 @@ export class Record extends Value{
     }
 
     public toString() {
-        return `[${this.pairs.map(pair=> `${pair[0]}=${pair[1].toString()}`).join(',')}}]`;
+        return `[${this.pairs.map(pair=> `${pair[0]}=${pair[1].toString()}`).join(',')}]`;
     }
 }
 
@@ -117,6 +117,10 @@ export class LetExpression extends Expression {
         super();
         this.let = [];
     }
+
+    public toString(): string {
+        return `let\n\t${this.let.map(l => l.toString()).join(',\n\t')}\nin\n\t${this.in.toString()}`
+    }
 }
 
 export class AssignExpression extends Expression {
@@ -147,7 +151,7 @@ export class IfExpression extends Expression {
     }
 
     public toString(): string {
-        return `(if (${this.condition.toString}) then ${this.ifThen.toString()} else ${this.elseThen.toString()})`;
+        return `(if (${this.condition.toString()}) then ${this.ifThen.toString()} else ${this.elseThen.toString()})`;
     }
 }
 
@@ -162,7 +166,7 @@ export class FieldAccessExpression extends Expression {
     }
 
     toString() {
-        return `${this.expr.toString()}[${this.field.toString()}]`;
+        return `${this.expr ? this.expr.toString() : ''}[${this.field.toString()}]`;
     }
 }
 
@@ -211,7 +215,7 @@ export class AddMetaExpression extends Expression {
     }
 }
 
-export type BinaryOperator = '+' | '-' | '*' | '/';
+export type BinaryOperator = '+' | '-' | '*' | '/' | '&';
 
 export class BinaryExpression extends Expression {
     public op: BinaryOperator;

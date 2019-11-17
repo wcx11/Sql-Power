@@ -2,7 +2,7 @@ import * as Functions from './Functions';
 import * as M from './M';
 import { JoinTypeEnum } from '../intermediate/Table';
 import { SearchConditionExpression, ComparisonExpression } from '../intermediate/Condition';
-import { VariableStack, GlobalKeyEnum } from './Variable';
+import { VariableStack, GlobalKeyEnum, METAKEY_TABLENAME, METAKEY_COLUMNNAME, META_COLUMNINFO } from './Variable';
 
 export function importSourceFromExcel(tableName: string, variableStack: VariableStack): M.Expression {
     const currentBook = Functions.Excel_CurrentWorkbook();
@@ -14,32 +14,34 @@ export function importSourceFromExcel(tableName: string, variableStack: Variable
 }
 
 export function addMetaToTable(table: M.Expression, tableName: string, hasMeta: boolean, variableStack: VariableStack) {
+    const paraColumn = variableStack.getName('column');
+    const paraName = variableStack.getName('name');
     const columnNames = hasMeta ?
         Functions.List_Transform(
-            new M.FieldAccessExpression(Functions.Value_Metadata(table), 'columnInfo'),
+            new M.FieldAccessExpression(Functions.Value_Metadata(table), META_COLUMNINFO),
             new M.FunctionDefinationExpression(
-                ['column'],
-                new M.FieldAccessExpression(new M.VariableExpression('column'), 'columnNames')
+                [paraColumn],
+                new M.FieldAccessExpression(new M.VariableExpression(paraColumn), METAKEY_COLUMNNAME)
             )
         ) : Functions.Table_ColumnNames(table);
 
     const fullColumnNames = Functions.List_Transform(
         columnNames,
         new M.FunctionDefinationExpression(
-            ['name'],
-            Functions.Text_Combine([new M.StringExpression(tableName), 'name'], ',')            
+            [paraName],
+            Functions.Text_Combine([new M.StringExpression(tableName), paraName], new M.StringExpression('.'))            
         )
     );
 
-    const metadata = new M.Record([['columnInfo', Functions.List_Transform(
+    const metadata = new M.Record([[META_COLUMNINFO, Functions.List_Transform(
         columnNames,
         new M.FunctionDefinationExpression(
-            ['name'],
-            new M.Record([['tableName', new M.StringExpression(tableName)], ['columnNames', 'name']])            
+            [paraName],
+            new M.Record([[METAKEY_TABLENAME, new M.StringExpression(tableName)], [METAKEY_COLUMNNAME, paraName]])            
         )
     )]]);
 
-    const tableWithMeta = new M.AddMetaExpression(Functions.Table_RenameColumnNames(table, columnNames, fullColumnNames), metadata);
+    const tableWithMeta = new M.AddMetaExpression(Functions.Table_RenameColumns(table, columnNames, fullColumnNames), metadata);
     tableWithMeta.valueType = M.ValueTypeEnum.TABLE;
     return tableWithMeta;
 }
@@ -51,8 +53,8 @@ export function joinTwoTable(left: M.Expression, right: M.Expression, joinType: 
 
     const leftList_M: M.Expression = Functions.Table_ToRecords(left);
     const rightList_M: M.Expression = Functions.Table_ToRecords(right);
-    const leftMeta_M: M.Expression = new M.FieldAccessExpression(Functions.Value_Metadata(left), 'columnInfo');
-    const rightMeta_M: M.Expression = new M.FieldAccessExpression(Functions.Value_Metadata(right), 'columnInfo');
+    const leftMeta_M: M.Expression = new M.FieldAccessExpression(Functions.Value_Metadata(left), META_COLUMNINFO);
+    const rightMeta_M: M.Expression = new M.FieldAccessExpression(Functions.Value_Metadata(right), META_COLUMNINFO);
     let joined: M.Expression;
     const paraAcc = variableStack.getName('acc');
     const paraLeftRow = variableStack.getName('leftRow');
@@ -64,7 +66,8 @@ export function joinTwoTable(left: M.Expression, right: M.Expression, joinType: 
             new M.List([]),
             new M.FunctionDefinationExpression(
                 [paraAcc, paraLeftRow],
-                Functions.Number_BitwiseAnd(
+                new M.BinaryExpression(
+                    '&',
                     paraAcc,
                     Functions.List_Accumulate(
                         rightList_M,
@@ -72,8 +75,8 @@ export function joinTwoTable(left: M.Expression, right: M.Expression, joinType: 
                         new M.FunctionDefinationExpression(
                             [paraInnerAcc, paraRightRow],
                             new M.IfExpression(
-                                joinCondition.generateM(variableStack, {'TABLE': Functions.Number_BitwiseAnd(paraLeftRow, paraRightRow), 'META': Functions.Number_BitwiseAnd(leftMeta_M, rightMeta_M)}),
-                                Functions.Number_BitwiseAnd(paraInnerAcc, Functions.Number_BitwiseAnd(paraLeftRow, paraRightRow)),
+                                joinCondition ? joinCondition.generateM(variableStack, {'TABLE': new M.BinaryExpression('&', paraLeftRow, paraRightRow), 'META': new M.BinaryExpression('&', leftMeta_M, rightMeta_M)}) : true,
+                                new M.BinaryExpression('&', paraInnerAcc, new M.List([new M.BinaryExpression('&', paraLeftRow, paraRightRow)])),
                                 paraInnerAcc
                             )
                         )
@@ -83,7 +86,7 @@ export function joinTwoTable(left: M.Expression, right: M.Expression, joinType: 
         )
     }
 
-    return new M.AddMetaExpression(Functions.Table_FromRecords(joined), new M.Record([['columnInfo', Functions.Number_BitwiseAnd(leftMeta_M, rightMeta_M)]]));
+    return new M.AddMetaExpression(Functions.Table_FromRecords(joined), new M.Record([[META_COLUMNINFO, new M.BinaryExpression('&', leftMeta_M, rightMeta_M)]]));
 }
 
 export function combineTables(tables: M.Expression[], variableStack: VariableStack) {

@@ -1,6 +1,6 @@
 import { Column } from "./Table";
 import { Select } from "./Select";
-import { VariableStack, GlobalKeyEnum } from "../m/Variable";
+import { VariableStack, GlobalKeyEnum, METAKEY_COLUMNNAME, METAKEY_TABLENAME } from "../m/Variable";
 import * as M from '../m/M';
 import * as Functions from '../m/Functions';
 
@@ -128,7 +128,7 @@ export class DistinctExpression extends BaseExpression {
     }
 }
 
-export class ColumnExpressoin extends BaseExpression {
+export class ColumnExpression extends BaseExpression {
     public column: Column;
     constructor(_column: Column) {
         super();
@@ -136,16 +136,19 @@ export class ColumnExpressoin extends BaseExpression {
     }
 
     public generateM(variableStack: VariableStack, globalInfo: {[key: string]: any}) {
-        const fullColumnName_M = this.column.tableNameOrAlias ?
-        `${this.column.tableNameOrAlias}.${this.column.columnName}` :
-        new M.FieldAccessExpression(new M.IndexAccessExpression(
-            new M.ItemAccessExpression(
-                globalInfo[GlobalKeyEnum.META],
-                new M.Record([['columnName', new M.StringExpression(this.column.columnName)]])
-                ),
-            0
-        ), 'tableName');
-        return new M.FieldAccessExpression(globalInfo[GlobalKeyEnum.TABLE], fullColumnName_M)
+        if (this.column.tableNameOrAlias) {
+            return new M.FieldAccessExpression(globalInfo[GlobalKeyEnum.TABLE], `${this.column.tableNameOrAlias}.${this.column.columnName}`);
+        } else {
+            const fullColumnName_M = Functions.Text_Combine([new M.FieldAccessExpression(
+                new M.IndexAccessExpression(
+                    Functions.List_Select(
+                        globalInfo[GlobalKeyEnum.META],
+                        new M.EachExpression(new M.ComparisionExpression('=',new M.FieldAccessExpression(null, METAKEY_COLUMNNAME), new M.StringExpression(this.column.columnName)))
+                    ),
+                0
+            ), METAKEY_TABLENAME), new M.StringExpression(this.column.columnName)], new M.StringExpression('.'));
+            return Functions.Record_Field(globalInfo[GlobalKeyEnum.TABLE], fullColumnName_M);
+        }
     }
 }
 

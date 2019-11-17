@@ -143,3 +143,7 @@ export enum GlobalKeyEnum {
     META = 'META',
     SOURCE = 'SOURCE'
 }
+
+export const METAKEY_COLUMNNAME = 'columnName';
+export const METAKEY_TABLENAME = 'tableName';
+export const META_COLUMNINFO = 'columnInfo';

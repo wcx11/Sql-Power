@@ -29,9 +29,9 @@ export function Table_Group(table: M.ExpressionOrConst, keys: M.ExpressionOrCons
     return new M.InvokeFunctionExpression('Table.Group', table, new M.List(keys), new M.List(aggregatedColumns));
 }
 
-export function Table_RenameColumnNames(table: M.Expression, oldNames: M.ExpressionOrConst, newNames: M.ExpressionOrConst) {
+export function Table_RenameColumns(table: M.Expression, oldNames: M.ExpressionOrConst, newNames: M.ExpressionOrConst) {
     const renames = List_Zip(oldNames, newNames);
-    return new M.InvokeFunctionExpression('Table.RenameColumnNames', renames);
+    return new M.InvokeFunctionExpression('Table.RenameColumns', table, renames);
 }
 
 export enum MJoinKindEnum {
@@ -121,10 +121,14 @@ export function List_Transform(list: M.ExpressionOrConst, transform: M.Expressio
 }
 
 export function List_Zip(...lists: M.ExpressionOrConst[]): M.InvokeFunctionExpression {
-    return new M.InvokeFunctionExpression('List.Transform', new M.List(lists));
+    return new M.InvokeFunctionExpression('List.Zip', new M.List(lists));
 }
 
-export function Text_Combine(lists: M.ExpressionOrConst[], separator: string): M.InvokeFunctionExpression {
+export function Record_Field(record: M.ExpressionOrConst, field: M.Expression) {
+    return new M.InvokeFunctionExpression('Record.Field', record, field);
+}
+
+export function Text_Combine(lists: M.ExpressionOrConst[], separator: M.ExpressionOrConst): M.InvokeFunctionExpression {
     return new M.InvokeFunctionExpression('Text.Combine', new M.List(lists), separator);
 }
 

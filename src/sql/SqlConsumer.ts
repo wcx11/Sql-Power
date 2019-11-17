@@ -14,8 +14,8 @@ export const compile = (sql: string) => {
     const tree = parser.sql_clause();
     console.log('tree', tree);
     const compileVisitor = new CompileTSqlParserVisitor();
-    const a = tree.accept(compileVisitor);
-    console.log(a);
+    const m = tree.accept(compileVisitor);
+    console.log('m', m);
 };
 
 class Visitor {

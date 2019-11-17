@@ -2196,7 +2196,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
         }
 
         if (ctx.full_column_name()) {
-            return new Exp.ColumnExpressoin(ctx.full_column_name().accept(this));
+            return new Exp.ColumnExpression(ctx.full_column_name().accept(this));
         }
 
         if (ctx.unary_operator_expression()) {
@@ -2298,7 +2298,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
     };
 
     // Recursively calculate search condition or.
-    private calcuateSearchOr = function (searchAndList: Parser.Search_condition_andContext[]): Condition.SearchConditionExpression {
+    public calculateSearchOr = function (searchAndList: Parser.Search_condition_andContext[]): Condition.SearchConditionExpression {
         const [first, ...remain] = searchAndList;
         if (searchAndList.length == 1) {
             return first.accept(this);
@@ -2308,7 +2308,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
     }
 
     // Recursively calculate search condition and.
-    private calculateSearchAnd = function (searchNotList: Parser.Search_condition_notContext[]): Condition.SearchConditionExpression {
+    public calculateSearchAnd = function (searchNotList: Parser.Search_condition_notContext[]): Condition.SearchConditionExpression {
         const [first, ...remain] = searchNotList;
         if (searchNotList.length == 1) {
             return first.accept(this);
@@ -2657,7 +2657,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
 
 
     // Visit a parse tree produced by TSqlParser#join_part.
-    public visitJoin_part = function (ctx: Parser.Join_partContext) {
+    public visitJoin_part = function (ctx: Parser.Join_partContext): JoinPart {
         let joinPart = new JoinPart();
         joinPart.joinType = JoinTypeEnum.INNER;
         if (ctx.LEFT()) {
@@ -2687,6 +2687,8 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
         if (ctx.search_condition()) {
             joinPart.joinCondition = ctx.search_condition().accept(this);
         }
+
+        return joinPart;
     };
 
 
