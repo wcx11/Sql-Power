@@ -1,9 +1,27 @@
 import * as React from 'react';
-import { Editor } from './Editor';
+import { EditorContainer } from './Editor';
 import { initializeIcons } from '@uifabric/icons';
-import { CommandBar } from './CommandBar';
+import { CommandBarContainer } from './CommandBar';
 import { Stack, StackItem, IStackStyles, DefaultPalette, IStackTokens } from 'office-ui-fabric-react';
+import { Provider } from 'react-redux';
+import { createStore, combineReducers, AnyAction } from 'redux';
+import { initialMainStates, AppStates } from '../store/AppStates';
+import { mainReducers } from '../reducers/MainReducers';
+import { MainStates } from '../store/MainStates';
+
 initializeIcons();
+
+
+let reducers = combineReducers({
+    main: mainReducers
+});
+
+export const mainStore = createStore<AppStates, AnyAction, {}, {}>(reducers,
+    {
+        main: initialMainStates,
+    }
+);
+
 
 const stackStyles: IStackStyles = {
     root: {
@@ -22,22 +40,29 @@ const innerStackTokens: IStackTokens = {
     padding: 0
 };
 
-export class MainComponent extends React.Component<any, any> {
+
+export interface AppState {
+}
+
+export class MainComponent extends React.Component<any, AppState> {
     private inputRef: HTMLInputElement;
     render(): JSX.Element {
         return (
+        <Provider store={mainStore}>
         <Stack className='app' tokens={innerStackTokens}>
             <Stack>
-                <CommandBar></CommandBar>
+                <CommandBarContainer></CommandBarContainer>
             </Stack>
             <Stack className='editorContainer' styles={stackStyles} tokens={innerStackTokens}>
                 <StackItem grow>
-                    <Editor language='sql' theme='vs-dark'></Editor>
+                    <EditorContainer language='sql' theme='vs-dark'></EditorContainer>
                 </StackItem>
                 <StackItem grow>
-                    <Editor language='powerquery' theme='vs-dark'></Editor>
+                    <EditorContainer language='powerquery' theme='vs-dark'></EditorContainer>
                 </StackItem>
             </Stack>
-        </Stack>);
+        </Stack>
+        </Provider>
+        );
     }
 }
