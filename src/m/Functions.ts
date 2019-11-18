@@ -17,6 +17,10 @@ export function Value_Metadata(value: M.ExpressionOrConst): M.InvokeFunctionExpr
     return new M.InvokeFunctionExpression('Value.Metadata', value);
 }
 
+export function Table_Column(table: M.ExpressionOrConst, column: M.ExpressionOrConst) {
+    return new M.InvokeFunctionExpression('Table.Column', table, column);
+}
+
 export function Table_ColumnNames(table: M.ExpressionOrConst): M.InvokeFunctionExpression {
     return new M.InvokeFunctionExpression('Table.ColumnNames', table);
 }
@@ -144,7 +148,7 @@ export function List_Zip(...lists: M.ExpressionOrConst[]): M.InvokeFunctionExpre
     return new M.InvokeFunctionExpression('List.Zip', new M.List(lists));
 }
 
-export function Record_Field(record: M.ExpressionOrConst, field: M.Expression) {
+export function Record_Field(record: M.ExpressionOrConst, field: M.ExpressionOrConst) {
     return new M.InvokeFunctionExpression('Record.Field', record, field);
 }
 

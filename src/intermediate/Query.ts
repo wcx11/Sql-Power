@@ -65,7 +65,9 @@ export class Query {
                     
                     globalInfo[GlobalKeyEnum.RESERVED_M] = new M.BinaryExpression('&', globalInfo[GlobalKeyEnum.RESERVED_M], new M.List([Functions.Text_Combine([tableName_M, columnName], new M.StringExpression('.'))]));
                     selectMeta = new M.BinaryExpression('&', selectMeta, new M.List([new M.Record([[METAKEY_TABLENAME, tableName_M], [METAKEY_COLUMNNAME, columnName]])]));
-                    result.push(new M.List([Functions.Text_Combine([tableName_M, columnName], new M.StringExpression('.')), new M.EachExpression(currentSelect.column.generateM(variableStack, {'TABLE': '_', 'META': globalInfo[GlobalKeyEnum.META_LIST_M]}))]));
+                    result.push(new M.List([
+                        Functions.Text_Combine([tableName_M, columnName], new M.StringExpression('.')),
+                        new M.EachExpression(currentSelect.column.generateM(variableStack, {'TABLE': '_', 'META': globalInfo[GlobalKeyEnum.META_LIST_M], 'INGROUP': true, 'INAGG': false}))]));
                     break;
                 case SelectTypeEnum.EXPRESSION:
                     const expressionName_M = currentSelect.columnAlias ?
@@ -74,7 +76,7 @@ export class Query {
                     
                     globalInfo[GlobalKeyEnum.RESERVED_M] = new M.BinaryExpression('&', globalInfo[GlobalKeyEnum.RESERVED_M], new M.List([Functions.Text_Combine([new M.StringExpression(''), expressionName_M], new M.StringExpression('.'))]));
                     selectMeta = new M.BinaryExpression('&', selectMeta, new M.List([new M.Record([[METAKEY_TABLENAME, new M.StringExpression('.')], [METAKEY_COLUMNNAME, expressionName_M]])]))
-                    result.push(new M.List([expressionName_M, new M.EachExpression(currentSelect.expression.generateM(variableStack, {'TABLE': '_', 'META': globalInfo[GlobalKeyEnum.META_LIST_M]}))]));
+                    result.push(new M.List([expressionName_M, new M.EachExpression(currentSelect.expression.generateM(variableStack, {'TABLE': '_', 'META': globalInfo[GlobalKeyEnum.META_LIST_M], 'INGROUP': true, 'INAGG': false}))]));
                     break;
                 default:
                     throw new Error('UDT select will be supported in the future');

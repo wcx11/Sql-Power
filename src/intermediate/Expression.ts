@@ -84,23 +84,25 @@ export class AggregateFunctionExpression extends BaseExpression {
     }
 
     public generateM(variableStack: VariableStack, globalInfo: {[key: string]: any}) {
+        globalInfo[GlobalKeyEnum.INAGG] = true;
+        const innerExpression_M = Functions.List_Transform(globalInfo[GlobalKeyEnum.TABLE], new M.EachExpression((this.parameter as BaseExpression).generateM(variableStack, globalInfo)));
         switch (this.aggregateType) {
             case AggregateTypeEnum.SUM:
-                return Functions.List_Sum((this.parameter as BaseExpression).generateM(variableStack, globalInfo));
+                return Functions.List_Sum(innerExpression_M);
             case AggregateTypeEnum.AVG:
-                return Functions.List_Average((this.parameter as BaseExpression).generateM(variableStack, globalInfo));
+                return Functions.List_Average(innerExpression_M);
             case AggregateTypeEnum.COUNT:
                 if (this.parameter instanceof BaseExpression) {
-                    return Functions.List_Count((this.parameter as BaseExpression).generateM(variableStack, globalInfo))
+                    return Functions.List_Count(innerExpression_M)
                 } else {
                     return Functions.List_Count(globalInfo[GlobalKeyEnum.TABLE]);
                 }
             case AggregateTypeEnum.STDEV:
-                return Functions.List_StandardDeviation((this.parameter as BaseExpression).generateM(variableStack, globalInfo));
+                return Functions.List_StandardDeviation(innerExpression_M);
             case AggregateTypeEnum.MAX:
-                return Functions.List_Max((this.parameter as BaseExpression).generateM(variableStack, globalInfo));
+                return Functions.List_Max(innerExpression_M);
             case AggregateTypeEnum.MIN:
-                return Functions.List_Min((this.parameter as BaseExpression).generateM(variableStack, globalInfo));
+                return Functions.List_Min(innerExpression_M);
             case AggregateTypeEnum.VAR:
             case AggregateTypeEnum.VARP:
             case AggregateTypeEnum.STDEVP:
@@ -132,12 +134,18 @@ export class ColumnExpression extends BaseExpression {
     }
 
     public generateM(variableStack: VariableStack, globalInfo: {[key: string]: any}) {
-        if (this.column.tableNameOrAlias) {
-            return new M.FieldAccessExpression(globalInfo[GlobalKeyEnum.TABLE], `${this.column.tableNameOrAlias}.${this.column.columnName}`);
-        } else {
-            const fullColumnName_M = Functions.Custom_GetTableName(new M.StringExpression(this.column.columnName), globalInfo[GlobalKeyEnum.META_LIST_M]);
-            return Functions.Record_Field(globalInfo[GlobalKeyEnum.TABLE], fullColumnName_M);
-        }
+        const fullColumnName_M: M.ExpressionOrConst = this.column.tableNameOrAlias ?
+            `${this.column.tableNameOrAlias}.${this.column.columnName}` :
+            Functions.Text_Combine(
+                [Functions.Custom_GetTableName(new M.StringExpression(this.column.columnName), globalInfo[GlobalKeyEnum.META_LIST_M]), new M.StringExpression(this.column.columnName)],
+                new M.StringExpression('.')
+            );
+        
+        const fieldAccess_M = this.column.tableNameOrAlias ?
+            new M.FieldAccessExpression(globalInfo[GlobalKeyEnum.TABLE], fullColumnName_M) :
+            globalInfo[GlobalKeyEnum.INGROUP] ? Functions.Table_Column(globalInfo[GlobalKeyEnum.TABLE], fullColumnName_M): Functions.Record_Field(globalInfo[GlobalKeyEnum.TABLE], fullColumnName_M);
+        
+        return (globalInfo[GlobalKeyEnum.INGROUP] && !globalInfo[GlobalKeyEnum.INAGG]) ? new M.IndexAccessExpression(fieldAccess_M, 0) : fieldAccess_M;
     }
 }
 

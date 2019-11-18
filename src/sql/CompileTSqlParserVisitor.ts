@@ -2192,7 +2192,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
         }
 
         if (ctx.function_call()) {
-            return ctx.function_call().accept(this);
+            return ctx.function_call().accept(this)[0];
         }
 
         if (ctx.full_column_name()) {

@@ -143,7 +143,9 @@ export enum GlobalKeyEnum {
     META_LIST_M = 'META',
     SELECT_M = 'SELECT',
     SOURCE = 'SOURCE',
-    RESERVED_M = 'RESERVED'
+    RESERVED_M = 'RESERVED',
+    INGROUP = 'INGROUP',
+    INAGG = 'INAGG'
 }
 
 export const METAKEY_COLUMNNAME = 'columnName';

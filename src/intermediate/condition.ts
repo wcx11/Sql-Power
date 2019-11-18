@@ -98,13 +98,13 @@ export class ListComparisonExpression extends SearchConditionExpression {
         this.comparisonType = _type;
     }
 
-    public generateM(variableStack: VariableStack, global): M.ConditionExpression {
+    public generateM(variableStack: VariableStack, globalInfo): M.ConditionExpression {
         const para = variableStack.getName('r');
         const comparisonList = Functions.List_Transform(
-            this.right instanceof Select ? this.right.generateM() : new M.List(this.right.map(r => r.generateM(variableStack, global))),
+            this.right instanceof Select ? this.right.generateM() : new M.List(this.right.map(r => r.generateM(variableStack, globalInfo))),
             new M.FunctionDefinationExpression(
                 [para],
-                new M.ComparisionExpression('=', this.left.generateM(variableStack, global), para)
+                new M.ComparisionExpression('=', this.left.generateM(variableStack, globalInfo), para)
             )
         );
 
