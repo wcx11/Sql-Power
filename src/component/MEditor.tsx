@@ -1,25 +1,19 @@
 import * as React from 'react';
 import MonacoEditor from 'react-monaco-editor';
-import { MainStates } from '../store/MainStates';
 import { Action } from 'redux';
 import { connect } from 'react-redux';
-import { codeChangeAction } from '../actions/MainActions';
 import { AppStates } from '../store/AppStates';
 
-export interface EditorProps {
+export interface MEditorProps {
     theme: 'vs-dark' | 'vs';
-    onChange(code: string): void;
+    code: string;    
 }
-export interface EditorState {
-    code: string;
+export interface MEditorState {
 }
 
-export class Editor extends React.Component<EditorProps, EditorState> {
+export class MEditor extends React.Component<MEditorProps, MEditorState> {
     constructor(props) {
         super(props);
-        this.state = {
-            code: '',
-        }
         this.onChange = this.onChange.bind(this);
     }
 
@@ -29,18 +23,18 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     }
 
     onChange(newValue, e) {
-        this.props.onChange(newValue);
         console.log('onChange', newValue, e);
     }
+
     render(): JSX.Element {
-        const code = this.state.code;
+        const code = this.props.code;
         const options = {
             selectOnLineNumbers: true
         };
         return (
             <MonacoEditor
                 height="100%"
-                language='sql'
+                language='powerquery'
                 theme={this.props.theme}
                 value={code}
                 options={options}
@@ -51,14 +45,13 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     }
 }
 
-function mapStateToProps(state: AppStates): Partial<EditorProps> {
-    return {};
+function mapStateToProps(state: AppStates): Partial<MEditorProps> {
+    return {code: state.main.mCode};
 }
 
-function mapDispatchToProps(dispatch: (action: Action) => any): Partial<EditorProps> {
+function mapDispatchToProps(dispatch: (action: Action) => any): Partial<MEditorProps> {
     return {
-        onChange: (code: string) => dispatch(codeChangeAction({ code }))
     }
 } 
 
-export const EditorContainer = connect(mapStateToProps, mapDispatchToProps)(Editor);
+export const MEditorContainer = connect(mapStateToProps, mapDispatchToProps)(MEditor);

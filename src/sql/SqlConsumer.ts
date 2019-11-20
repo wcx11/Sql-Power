@@ -3,7 +3,7 @@ import { TSqlLexer } from './grammar/TSqlLexer';
 import { TSqlParser } from './grammar/TSqlParser';
 import { CaseChangingStream } from './grammar/CaseChangingStream';
 import { CompileTSqlParserVisitor } from './CompileTSqlParserVisitor';
-export const compile = (sql: string) => {
+export const compile = (sql: string): string => {
     const input = sql;
     console.log(sql);
     const chars = new ANTLRInputStream(input);
@@ -16,6 +16,7 @@ export const compile = (sql: string) => {
     const compileVisitor = new CompileTSqlParserVisitor();
     const m = tree.accept(compileVisitor);
     console.log('m', m);
+    return m as string;
 };
 
 class Visitor {

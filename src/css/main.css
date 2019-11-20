@@ -6,11 +6,8 @@ html, body, #root, .app {
 
 .editorContainer {
     width: 100%;
-    height: 90%;
-}
-
-#commandBar {
-    position: fixed;
+    height: 800px;
+    position: relative;
 }
 
 #sqlEditor {

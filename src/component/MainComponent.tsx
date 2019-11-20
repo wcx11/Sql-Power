@@ -1,13 +1,14 @@
 import * as React from 'react';
 import { EditorContainer } from './Editor';
 import { initializeIcons } from '@uifabric/icons';
-import { CommandBarContainer } from './CommandBar';
+import { CommandBarContainer, CommandBar } from './CommandBar';
 import { Stack, StackItem, IStackStyles, DefaultPalette, IStackTokens } from 'office-ui-fabric-react';
 import { Provider } from 'react-redux';
 import { createStore, combineReducers, AnyAction } from 'redux';
 import { initialMainStates, AppStates } from '../store/AppStates';
 import { mainReducers } from '../reducers/MainReducers';
 import { MainStates } from '../store/MainStates';
+import { MEditorContainer } from './MEditor';
 
 initializeIcons();
 
@@ -16,7 +17,7 @@ let reducers = combineReducers({
     main: mainReducers
 });
 
-export const mainStore = createStore<AppStates, AnyAction, {}, {}>(reducers,
+export const appStore = createStore<AppStates, AnyAction, {}, {}>(reducers,
     {
         main: initialMainStates,
     }
@@ -48,20 +49,20 @@ export class MainComponent extends React.Component<any, AppState> {
     private inputRef: HTMLInputElement;
     render(): JSX.Element {
         return (
-        <Provider store={mainStore}>
-        <Stack className='app' tokens={innerStackTokens}>
-            <Stack>
+        <Provider store={appStore}>
+        <div className='app'>
+            <div id='commandBar'>
                 <CommandBarContainer></CommandBarContainer>
-            </Stack>
-            <Stack className='editorContainer' styles={stackStyles} tokens={innerStackTokens}>
-                <StackItem grow>
-                    <EditorContainer language='sql' theme='vs-dark'></EditorContainer>
-                </StackItem>
-                <StackItem grow>
-                    <EditorContainer language='powerquery' theme='vs-dark'></EditorContainer>
-                </StackItem>
-            </Stack>
-        </Stack>
+            </div>
+            <div className='editorContainer'> 
+                <div id='sqlEditor'>
+                <EditorContainer theme='vs-dark'></EditorContainer>
+                </div>
+                <div id='mEditor'>
+                <MEditorContainer theme='vs-dark'></MEditorContainer>
+                </div>
+            </div>
+        </div>
         </Provider>
         );
     }

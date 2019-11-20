@@ -1,16 +1,18 @@
 import { MainStates } from "../store/MainStates";
 import { initialMainStates } from "../store/AppStates";
-import { MainActionType, codeChangeAction, startCompileAction, endCompileAction } from "../actions/MainActions";
+import { MainActionType, codeChangeAction, startCompileAction, endCompileAction, setMCodeAction } from "../actions/MainActions";
 import { getType } from "typesafe-actions";
 
 export const mainReducers = (state: MainStates = initialMainStates, action: MainActionType): MainStates => {
     switch (action.type) {
         case getType(codeChangeAction):
-            return {sqlCode: action.payload.code, ...state};
+            return {... state, sqlCode: action.payload.code};
+        case getType(setMCodeAction):
+            return {... state, mCode: action.payload.code};
         case getType(startCompileAction):
-            return {isCompiling: true, ...state};
+            return {...state, isCompiling: true};
         case getType(endCompileAction):
-            return {isCompiling: false, ...state};
+            return {...state, isCompiling: false};
         default:
             break;
     }
