@@ -7,7 +7,6 @@ import * as Utils from '../m/Utils';
 
 export abstract class TableSource {
     alias?: string;
-    protected variableName?: string;
     public abstract generateM(variableStack: VariableStack): M.Expression;
     public abstract getVariableName(variableStack: VariableStack): string;
 }
@@ -26,10 +25,7 @@ export class Table extends TableSource {
     }
 
     public getVariableName(variableStack: VariableStack): string {
-        if (!this.variableName) {
-            this.variableName = variableStack.getName(this.alias || this.name);
-        }
-        return this.variableName;
+        return variableStack.getName(this.alias || this.name);
     }
 }
 
@@ -38,14 +34,17 @@ export class DerivedTable extends TableSource {
     alias: string;
 
     public generateM(variableStack: VariableStack): M.Expression {
-        return Utils.addMetaToTable(this.subQuery.generateM(), this.alias, true, variableStack);
+        const l = new M.LetExpression();
+        const paraQuery = variableStack.getName('source');
+        l.let.push(new M.AssignExpression(paraQuery, this.subQuery.generateM()));
+        const paraAfterMeta = variableStack.getName('sourceWithMeta');
+        l.let.push(new M.AssignExpression(paraAfterMeta, Utils.addMetaToTable(paraQuery, this.alias, true, variableStack)))
+        l.in = paraAfterMeta
+        return l;
     }
 
     public getVariableName(variableStack: VariableStack) {
-        if (!this.variableName) {
-            this.variableName = variableStack.getName(this.alias || 'subQuery');
-        }
-        return this.variableName;
+        return variableStack.getName(this.alias || 'subQuery');
     }
 }
 
@@ -73,10 +72,7 @@ export class JoinedTable extends TableSource {
     }
 
     public getVariableName(variableStack: VariableStack) {
-        if (!this.variableName) {
-            this.variableName = variableStack.getName('joinedTable');
-        }
-        return this.variableName;
+        return variableStack.getName('joinedTable');
     }
 }
 

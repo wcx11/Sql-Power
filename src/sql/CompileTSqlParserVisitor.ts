@@ -59,7 +59,7 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
     // Visit a parse tree produced by TSqlParser#dml_clause.
     public visitDml_clause = function (ctx: Parser.Dml_clauseContext) {
         if (ctx.select_statement()) {
-            return ctx.select_statement().accept(this).toString();
+            return (ctx.select_statement().accept(this) as Select).generateM().toString();
         } else {
             throw new Error('currently only select_statement is supported in dml_clause');
         }
@@ -1374,9 +1374,9 @@ export class CompileTSqlParserVisitor extends AbstractParseTreeVisitor<any> impl
         const select = new Select();
         select.query = ctx.query_expression().accept(this);
         if (ctx.order_by_clause()) {
-            select.order = ctx.order_by_clause().accept(this);
+            select.orders = ctx.order_by_clause().accept(this);
         }
-        return select.generateM();
+        return select;
     };
 
 

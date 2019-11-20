@@ -13,10 +13,19 @@ export function importSourceFromExcel(tableName: string, variableStack: Variable
     return addMetaToTable(table, tableName, false, variableStack);
 }
 
-export function addMetaToTable(table: M.Expression, tableName: string, hasMeta: boolean, variableStack: VariableStack) {
+export function addMetaToTable(table: M.ExpressionOrConst, tableName: string, hasMeta: boolean, variableStack: VariableStack) {
     const paraColumn = variableStack.getName('column');
     const paraName = variableStack.getName('name');
-    const columnNames = hasMeta ?
+    const oldFullColumnNames = hasMeta ?
+        Functions.List_Transform(
+            new M.FieldAccessExpression(Functions.Value_Metadata(table), META_COLUMNINFO),
+            new M.FunctionDefinationExpression(
+                [paraColumn],
+                Functions.Text_Combine([new M.FieldAccessExpression(new M.VariableExpression(paraColumn), METAKEY_TABLENAME), new M.FieldAccessExpression(new M.VariableExpression(paraColumn), METAKEY_COLUMNNAME)], new M.StringExpression('.'))
+            )
+        ) : Functions.Table_ColumnNames(table);
+
+    const oldColumnNames = hasMeta ?
         Functions.List_Transform(
             new M.FieldAccessExpression(Functions.Value_Metadata(table), META_COLUMNINFO),
             new M.FunctionDefinationExpression(
@@ -24,29 +33,30 @@ export function addMetaToTable(table: M.Expression, tableName: string, hasMeta: 
                 new M.FieldAccessExpression(new M.VariableExpression(paraColumn), METAKEY_COLUMNNAME)
             )
         ) : Functions.Table_ColumnNames(table);
-
     const fullColumnNames = Functions.List_Transform(
-        columnNames,
+        oldColumnNames,
         new M.FunctionDefinationExpression(
             [paraName],
             Functions.Text_Combine([new M.StringExpression(tableName), paraName], new M.StringExpression('.'))            
         )
     );
 
+
+
     const metadata = new M.Record([[META_COLUMNINFO, Functions.List_Transform(
-        columnNames,
+        oldColumnNames,
         new M.FunctionDefinationExpression(
             [paraName],
             new M.Record([[METAKEY_TABLENAME, new M.StringExpression(tableName)], [METAKEY_COLUMNNAME, paraName]])            
         )
     )]]);
 
-    const tableWithMeta = new M.AddMetaExpression(Functions.Table_RenameColumns(table, columnNames, fullColumnNames), metadata);
+    const tableWithMeta = new M.AddMetaExpression(Functions.Table_RenameColumns(table, oldFullColumnNames, fullColumnNames), metadata);
     tableWithMeta.valueType = M.ValueTypeEnum.TABLE;
     return tableWithMeta;
 }
 
-export function joinTwoTable(left: M.Expression, right: M.Expression, joinType: JoinTypeEnum, joinCondition: SearchConditionExpression, variableStack: VariableStack, globalInfo): M.Expression {
+export function joinTwoTable(left: M.ExpressionOrConst, right: M.ExpressionOrConst, joinType: JoinTypeEnum, joinCondition: SearchConditionExpression, variableStack: VariableStack, globalInfo): M.Expression {
     /*if (joinCondition instanceof ComparisonExpression && joinCondition.op === '=') {
         return Functions.Table_Join(left, {}, right, {}, joinType);
     }*/
@@ -93,7 +103,7 @@ export function joinTwoTable(left: M.Expression, right: M.Expression, joinType: 
 
 // when there are multiple tables in from clause: select * from table1, table2, table3, ...
 // the actual table source is the inner joined result of the tables without condition
-export function combineTables(tables: M.Expression[], variableStack: VariableStack) {
+export function combineTables(tables: M.ExpressionOrConst[], variableStack: VariableStack) {
     if (!tables || tables.length === 0) {
         return null;
     }
@@ -136,4 +146,24 @@ export const customCheckColumnName = new M.AssignExpression('Custom.CheckColumnN
             new M.BinaryExpression('&', 'suggestName', Functions.Number_ToText('step'))
         )
     )
+));
+
+export const customCompareList = new M.AssignExpression('Custom.CompareList', new M.FunctionDefinationExpression(
+    ['list1', 'list2'],
+    Functions.List_Accumulate(Functions.List_Zip('list1', 'list2'), 0, new M.FunctionDefinationExpression(
+        ['state', 'current'],
+        new M.IfExpression(
+            new M.ComparisionExpression('=', 'state', 0),
+            new M.IfExpression(
+                new M.ComparisionExpression('=', new M.IndexAccessExpression('current', 0), new M.IndexAccessExpression('current',1)),
+                0,
+                new M.IfExpression(
+                    new M.OrExpression(new M.ComparisionExpression('=', new M.IndexAccessExpression('current', 0), 'null'), new M.ComparisionExpression('<', new M.IndexAccessExpression('current', 0),new M.IndexAccessExpression('current', 1))),
+                    -1,
+                    1
+                )
+            ),
+            'state'
+        )
+    ))
 ));

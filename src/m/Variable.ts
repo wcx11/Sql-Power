@@ -54,11 +54,11 @@ export class VariableStack {
         let replaceName: string = suggest;
         let offset = 1;
         let currentScope = this.getCurrentScope();
-        while (currentScope.find((v) => {v.name === replaceName})) {
+        while (currentScope.find((v) => v.name === replaceName)) {
             replaceName = suggest + "_" + offset;
             offset++;
         }
-        
+        this.variables.push({name: replaceName, originName: suggest});
         return replaceName;
     }
 }
@@ -150,4 +150,5 @@ export enum GlobalKeyEnum {
 
 export const METAKEY_COLUMNNAME = 'columnName';
 export const METAKEY_TABLENAME = 'tableName';
+export const METAKEY_ORIG_COLUMNNAME = 'originColumnName';
 export const META_COLUMNINFO = 'columnInfo';

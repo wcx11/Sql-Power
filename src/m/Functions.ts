@@ -33,13 +33,21 @@ export function Table_FromRecords(records: M.ExpressionOrConst): M.InvokeFunctio
     return new M.InvokeFunctionExpression('Table.FromRecords', records);
 }
 
-export function Table_Group(table: M.ExpressionOrConst, keys: M.ExpressionOrConst, aggregatedColumns: any[]) {
-    return new M.InvokeFunctionExpression('Table.Group', table, keys,new M.List(aggregatedColumns));
+export function Table_Group(table: M.ExpressionOrConst, keys: M.ExpressionOrConst, aggregatedColumns: any[], comparer: M.ExpressionOrConst) {
+    return new M.InvokeFunctionExpression('Table.Group', table, keys,new M.List(aggregatedColumns), "null", comparer);
 }
 
-export function Table_RenameColumns(table: M.Expression, oldNames: M.ExpressionOrConst, newNames: M.ExpressionOrConst) {
+export function Table_RenameColumns(table: M.ExpressionOrConst, oldNames: M.ExpressionOrConst, newNames: M.ExpressionOrConst) {
     const renames = List_Zip(oldNames, newNames);
     return new M.InvokeFunctionExpression('Table.RenameColumns', table, renames);
+}
+
+export function Table_Sort(table: M.ExpressionOrConst, comparisonCriteria: M.ExpressionOrConst) {
+    return new M.InvokeFunctionExpression('Table.Sort', table, comparisonCriteria);
+}
+
+export function Table_SelectColumns(table: M.ExpressionOrConst, columnOrder: M.ExpressionOrConst) {
+    return new M.InvokeFunctionExpression('Table.SelectColumns', table, columnOrder);
 }
 
 export enum MJoinKindEnum {
@@ -68,7 +76,7 @@ export function Table_Join(table1: M.Expression, column1: M.ExpressionOrConst, t
     return new M.InvokeFunctionExpression('Table.Join', table1, column1, table2, column2, joinKind.toString());
 }
 
-export function Table_ToRecords(table: M.Expression) {
+export function Table_ToRecords(table: M.ExpressionOrConst) {
     return new M.InvokeFunctionExpression('Table.ToRecords', table);
 }
 
@@ -190,4 +198,8 @@ export function Custom_CheckColumnName(tableName: M.ExpressionOrConst, suggestNa
 
 export function Custom_GetTableName(columnName: M.ExpressionOrConst, metaList: M.ExpressionOrConst) {
     return new M.InvokeFunctionExpression('Custom.GetTableName', columnName, metaList);
+}
+
+export function Custom_CompareList(list1: M.ExpressionOrConst, list2: M.ExpressionOrConst) {
+    return new M.InvokeFunctionExpression('Custom.CompareList', list1, list2);
 }

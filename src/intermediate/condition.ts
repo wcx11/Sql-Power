@@ -132,6 +132,6 @@ export class CheckNullExpression extends SearchConditionExpression {
     }
 
     public generateM(variableStack: VariableStack, global: {[key: string]: any}): M.ConditionExpression {
-        return new M.ComparisionExpression(this.isNull ? '=' : '<>', this.expr.generateM(variableStack, global), null);
+        return new M.ComparisionExpression(this.isNull ? '=' : '<>', this.expr.generateM(variableStack, global), "null");
     }
 }

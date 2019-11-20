@@ -85,7 +85,7 @@ export class FunctionDefinationExpression extends Expression {
     parameters: string[];
     functionBody: ExpressionOrConst;
 
-    constructor(_parameters: string[], _functionBody: Expression) {
+    constructor(_parameters: string[], _functionBody: ExpressionOrConst) {
         super();
         this.parameters = _parameters;
         this.functionBody = _functionBody;
@@ -156,10 +156,10 @@ export class IfExpression extends Expression {
 }
 
 export class FieldAccessExpression extends Expression {
-    expr: Expression;
+    expr: ExpressionOrConst;
     field: ExpressionOrConst;
 
-    constructor(_expr: Expression, _field: ExpressionOrConst) {
+    constructor(_expr: ExpressionOrConst, _field: ExpressionOrConst) {
         super();
         this.expr = _expr;
         this.field = _field;
@@ -171,10 +171,10 @@ export class FieldAccessExpression extends Expression {
 }
 
 export class IndexAccessExpression extends Expression {
-    expr: Expression;
+    expr: ExpressionOrConst;
     index: number;
 
-    constructor(_expr: Expression, _index: number) {
+    constructor(_expr: ExpressionOrConst, _index: number) {
         super();
         this.expr = _expr;
         this.index = _index;
@@ -204,7 +204,7 @@ export class AddMetaExpression extends Expression {
     expr: ExpressionOrConst;
     meta: Expression;
 
-    constructor(_expr: Expression, _meta: Expression) {
+    constructor(_expr: ExpressionOrConst, _meta: Expression) {
         super();
         this.expr = _expr;
         this.meta = _meta;
@@ -265,7 +265,7 @@ export class AndExpression extends LogicalExpression {
     }
 
     public toString() {
-        return `(${this.left.toString()} and ${this.right.toString})`;
+        return `(${this.left.toString()} and ${this.right.toString()})`;
     }
 }
 
@@ -279,7 +279,7 @@ export class OrExpression extends LogicalExpression {
     }
 
     public toString() {
-        return `(${this.left.toString()} or ${this.right.toString})`;
+        return `(${this.left.toString()} or ${this.right.toString()})`;
     }
 }
 
