@@ -79,16 +79,16 @@ export class Query {
                     break;
                 case SelectTypeEnum.EXPRESSION:
                     const expressionName_M = currentSelect.columnAlias ?
-                        currentSelect.columnAlias :
+                        new M.StringExpression(currentSelect.columnAlias) :
                         Functions.Custom_CheckColumnName(new M.StringExpression(''), new M.StringExpression('expression'), globalInfo[GlobalKeyEnum.RESERVED_M], 0);
-                    
-                    globalInfo[GlobalKeyEnum.RESERVED_M] = new M.BinaryExpression('&', globalInfo[GlobalKeyEnum.RESERVED_M], new M.List([Functions.Text_Combine([new M.StringExpression(''), expressionName_M], new M.StringExpression('.'))]));
+                    const fullExpressionName_M = Functions.Text_Combine([new M.StringExpression(''), expressionName_M], new M.StringExpression('.'));
+                    globalInfo[GlobalKeyEnum.RESERVED_M] = new M.BinaryExpression('&', globalInfo[GlobalKeyEnum.RESERVED_M], new M.List([fullExpressionName_M]));
                     selectMeta = new M.BinaryExpression('&', selectMeta, new M.List([new M.Record([
                         [METAKEY_TABLENAME, new M.StringExpression('')],
                         [METAKEY_COLUMNNAME, expressionName_M],
                         [METAKEY_ORIG_COLUMNNAME, "null"]
                     ])]))
-                    result.push(new M.List([expressionName_M, new M.EachExpression(currentSelect.expression.generateM(variableStack, {'TABLE': '_', 'META': globalInfo[GlobalKeyEnum.META_LIST_M], 'INGROUP': true, 'INAGG': false}))]));
+                    result.push(new M.List([fullExpressionName_M, new M.EachExpression(currentSelect.expression.generateM(variableStack, {'TABLE': '_', 'META': globalInfo[GlobalKeyEnum.META_LIST_M], 'INGROUP': true, 'INAGG': false}))]));
                     break;
                 default:
                     throw new Error('UDT select will be supported in the future');
